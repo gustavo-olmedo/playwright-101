@@ -202,4 +202,122 @@ test.describe("Store - Payment", () => {
       });
     }
   });
+
+  test("payment items and total match the cart page", async ({ page }) => {
+    // Build cart with a few items, then go to Payment and compare
+    let cartSnapshot: {
+      items: { name: string; quantity: number; price: number; total: number }[];
+      total: number;
+    };
+
+    await test.step("build cart and capture snapshot", async () => {
+      // From Payment → Catalog
+      await openCatalogTab(page);
+      await addToCartFromCatalog(page, "Giant Rubber Duck", 1);
+      await addToCartFromCatalog(page, "Bacon-Scented Candle", 2);
+
+      // Go to Cart
+      await openCartTab(page);
+
+      const list = page.getByTestId("cart-list");
+      const items = list.locator('li[data-testid^="cart-item-"]');
+      const count = await items.count();
+
+      const result: {
+        name: string;
+        quantity: number;
+        price: number;
+        total: number;
+      }[] = [];
+
+      let sum = 0;
+
+      for (let i = 0; i < count; i++) {
+        const nameText = await page
+          .getByTestId(`cart-item-name-${i}`)
+          .textContent();
+        const quantityText = await page
+          .getByTestId(`cart-item-quantity-${i}`)
+          .textContent();
+        const priceText = await page
+          .getByTestId(`cart-item-price-value-${i}`)
+          .textContent();
+        const rowTotalText = await page
+          .getByTestId(`cart-item-total-value-${i}`)
+          .textContent();
+
+        const quantity = parseFloat((quantityText || "0").trim());
+        const price = parseFloat((priceText || "0").trim());
+        const rowTotal = parseFloat((rowTotalText || "0").trim());
+
+        result.push({
+          name: (nameText || "").trim(),
+          quantity,
+          price,
+          total: rowTotal,
+        });
+
+        sum += rowTotal;
+      }
+
+      const cartTotalText = await page
+        .getByTestId("cart-total-value")
+        .textContent();
+      const cartTotal = parseFloat((cartTotalText || "0").trim());
+      expect(parseFloat(sum.toFixed(2))).toBe(cartTotal);
+
+      cartSnapshot = { items: result, total: cartTotal };
+
+      const goToPaymentButton = page.getByTestId("cart-go-to-payment");
+      await expect(goToPaymentButton).toBeVisible();
+      await goToPaymentButton.click();
+      await expect(page.getByTestId("payment-page")).toBeVisible();
+    });
+
+    await test.step("verify payment page matches cart snapshot", async () => {
+      const list = page.getByTestId("payment-cart-list");
+      const items = list.locator('[data-testid^="payment-cart-item-"]');
+      const count = await items.count();
+
+      expect(count).toBe(cartSnapshot.items.length);
+
+      let paymentSum = 0;
+
+      for (let i = 0; i < count; i++) {
+        const nameText = (
+          await page.getByTestId(`payment-item-name-${i}`).textContent()
+        )?.trim();
+        const quantityText = await page
+          .getByTestId(`payment-item-quantity-${i}`)
+          .textContent();
+        const priceText = await page
+          .getByTestId(`payment-item-price-value-${i}`)
+          .textContent();
+        const totalText = await page
+          .getByTestId(`payment-item-total-value-${i}`)
+          .textContent();
+
+        const quantity = parseFloat((quantityText || "0").trim());
+        const price = parseFloat((priceText || "0").trim());
+        const total = parseFloat((totalText || "0").trim());
+
+        const fromCart = cartSnapshot.items[i];
+
+        expect(nameText).toBe(fromCart.name);
+        expect(quantity).toBe(fromCart.quantity);
+        expect(price).toBe(fromCart.price);
+        expect(total).toBe(fromCart.total);
+
+        paymentSum += total;
+      }
+
+      const paymentTotalText = await page
+        .getByTestId("payment-total-value")
+        .textContent();
+      const paymentTotal = parseFloat((paymentTotalText || "0").trim());
+
+      expect(paymentTotal).toBe(parseFloat(paymentSum.toFixed(2)));
+      expect(paymentTotal).toBe(cartSnapshot.total);
+    });
+  });
 });
