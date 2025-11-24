@@ -99,4 +99,80 @@ test.describe("Store - Inventory", () => {
       expect.soft(dialogMessage).toBe("Please fill in all fields!");
     });
   });
+
+  test("adds a new product in the list", async ({ page }) => {
+    const list = page.getByTestId("inventory-product-list");
+    const products = list.locator('li[data-testid^="inventory-product-"]');
+    const initialCount = await products.count();
+
+    const newProductName = "Playwright Test Product";
+    const priceInputValue = "23.23";
+    const quantityInputValue = "22.9"; // decimals should be accepted but stored as integer
+
+    await test.step("fills all form fields", async () => {
+      await page.getByTestId("inventory-input-name").fill(newProductName);
+      await page.getByTestId("inventory-input-price").fill(priceInputValue);
+      await page
+        .getByTestId("inventory-input-quantity")
+        .fill(quantityInputValue);
+    });
+
+    await test.step("submits the form and appends product to the list", async () => {
+      await page.getByTestId("inventory-submit-button").click();
+
+      // New product should appear at the end (index = initialCount)
+      const newProduct = page.getByTestId(`inventory-product-${initialCount}`);
+      await expect(newProduct).toBeVisible();
+    });
+
+    await test.step("validates product name and price", async () => {
+      const nameLocator = page.getByTestId(
+        `inventory-product-name-${initialCount}`
+      );
+      await expect(nameLocator).toHaveText(newProductName);
+
+      const priceLabel = page.getByTestId(
+        `inventory-product-price-label-${initialCount}`
+      );
+      const priceValue = page.getByTestId(
+        `inventory-product-price-value-${initialCount}`
+      );
+
+      await expect(priceLabel).toHaveText("Price: €");
+      await expect(priceValue).toHaveText(priceInputValue); // decimals preserved for price
+    });
+
+    await test.step("validates integer-only quantity display", async () => {
+      const qtyLocator = page.getByTestId(
+        `inventory-product-quantity-${initialCount}`
+      );
+      await expect(qtyLocator).toHaveText("22");
+    });
+
+    await test.step("new product has working + and - buttons", async () => {
+      const qtyLocator = page.getByTestId(
+        `inventory-product-quantity-${initialCount}`
+      );
+      const increaseButton = page.getByTestId(
+        `inventory-product-increase-${initialCount}`
+      );
+      const decreaseButton = page.getByTestId(
+        `inventory-product-decrease-${initialCount}`
+      );
+
+      await expect(increaseButton).toBeVisible();
+      await expect(decreaseButton).toBeVisible();
+
+      const originalQuantity = parseInt(
+        (await qtyLocator.textContent()) || "0",
+        10
+      );
+
+      await increaseButton.click();
+      await expect(qtyLocator).toHaveText(String(originalQuantity + 1));
+
+      await decreaseButton.click();
+      await expect(qtyLocator).toHaveText(String(originalQuantity));
+    });
+  });
 });
