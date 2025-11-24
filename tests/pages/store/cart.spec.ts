@@ -132,4 +132,35 @@ test.describe("Store - Cart", () => {
       });
     }
   });
+
+  test("cart total equals sum of row totals", async ({ page }) => {
+    await test.step("create a cart with two items from catalog", async () => {
+      await addToCartFromCatalog(page, "Giant Rubber Duck", 1);
+      await addToCartFromCatalog(page, "Bacon-Scented Candle", 1);
+    });
+
+    await openCartPage(page, false);
+
+    const list = page.getByTestId("cart-list");
+    const items = list.locator('li[data-testid^="cart-item-"]');
+    const count = await items.count();
+
+    let sum = 0;
+
+    for (let i = 0; i < count; i++) {
+      const rowTotalText = await page
+        .getByTestId(`cart-item-total-value-${i}`)
+        .textContent();
+      const rowTotal = parseFloat((rowTotalText || "0").trim());
+      sum += rowTotal;
+    }
+
+    const cartTotalText = await page
+      .getByTestId("cart-total-value")
+      .textContent();
+    const cartTotal = parseFloat((cartTotalText || "0").trim());
+    const expectedSum = parseFloat(sum.toFixed(2));
+
+    expect(cartTotal).toBe(expectedSum);
+  });
 });
