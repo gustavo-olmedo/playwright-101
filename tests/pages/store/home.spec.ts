@@ -25,4 +25,31 @@ test.describe("Store - Home", () => {
       );
     });
   });
+
+  test("displays all isntruction sections in the correct order", async ({
+    page,
+  }) => {
+    const list = page.getByTestId("instructions-list");
+    // Use css selector for the locator and get all sections
+    const sections = await list
+      .locator('> div[data-testid^="instructions-section-"]')
+      .all();
+
+    // I expect to have 5 sections
+    expect(sections).toHaveLength(5);
+
+    const expectedOrder = [
+      "instructions-section-inventory",
+      "instructions-section-catalog",
+      "instructions-section-cart",
+      "instructions-section-payment",
+      "instructions-section-orders",
+    ];
+
+    const testIds = await Promise.all(
+      sections.map((s) => s.getAttribute("data-testid"))
+    );
+
+    expect(testIds).toEqual(expectedOrder);
+  });
 });
