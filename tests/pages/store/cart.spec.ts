@@ -297,4 +297,24 @@ test.describe("Store - Cart", () => {
       expect(rowTotal).toBe(expected);
     });
   });
+
+  test("Go to Payments button navigates to Payments section when cart has items", async ({
+    page,
+  }) => {
+    await test.step("add item to cart so summary and button exist", async () => {
+      await addToCartFromCatalog(page, "Giant Rubber Duck", 1);
+    });
+
+    await openCartPage(page, false);
+
+    await test.step("click Go to Payments", async () => {
+      const button = page.getByTestId("cart-go-to-payment");
+      await expect(button).toBeVisible();
+      await button.click();
+    });
+
+    await test.step("shows Payments page/section", async () => {
+      await expect(page.getByTestId("payment-page")).toBeVisible();
+    });
+  });
 });
