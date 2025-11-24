@@ -340,4 +340,26 @@ test.describe("Store - Payment", () => {
       await confirmButton.click();
     });
   });
+
+  test("selecting a payment method and confirming navigates to Orders section", async ({
+    page,
+  }) => {
+    await setupPaymentWithItems(page);
+
+    await test.step("select a payment method", async () => {
+      const mbWayInput = page.getByTestId("payment-method-input-MBWay");
+      await expect(mbWayInput).not.toBeChecked();
+      await mbWayInput.check();
+      await expect(mbWayInput).toBeChecked();
+    });
+
+    await test.step("confirm payment", async () => {
+      const confirmButton = page.getByTestId("payment-confirm-button");
+      await confirmButton.click();
+    });
+
+    await test.step("lands on Orders page", async () => {
+      await expect(page.getByTestId("orders-page")).toBeVisible();
+    });
+  });
 });
