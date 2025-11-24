@@ -142,4 +142,34 @@ test.describe("Store - Home", () => {
       });
     });
   });
+
+  test.describe("Orders section", () => {
+    test("shows Orders icon, title, and description", async ({ page }) => {
+      const section = page.getByTestId("instructions-section-orders");
+
+      await test.step("section is visible", async () => {
+        await expect(section).toBeVisible();
+      });
+
+      await test.step("icon is visible", async () => {
+        await expect(
+          page.getByTestId("instructions-icon-orders")
+        ).toBeVisible();
+      });
+
+      await test.step("title text is correct", async () => {
+        const title = page.getByTestId("instructions-orders-title");
+        await expect(title).toBeVisible();
+        await expect(title).toHaveText("Orders");
+      });
+
+      await test.step("description text is correct", async () => {
+        const text = page.getByTestId("instructions-orders-text");
+        await expect(text).toBeVisible();
+        await expect(text).toHaveText(
+          "Review your purchase history, including date, items, total, and payment method."
+        );
+      });
+    });
+  });
 });
