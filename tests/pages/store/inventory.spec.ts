@@ -175,4 +175,56 @@ test.describe("Store - Inventory", () => {
       await expect(qtyLocator).toHaveText(String(originalQuantity));
     });
   });
+
+  test("increments and decrements quantity for an existing product", async ({
+    page,
+  }) => {
+    const firstProductIndex = 0; // We will pick the first item
+
+    const qtyLocator = page.getByTestId(
+      `inventory-product-quantity-${firstProductIndex}`
+    );
+    const increaseButton = page.getByTestId(
+      `inventory-product-increase-${firstProductIndex}`
+    );
+    const decreaseButton = page.getByTestId(
+      `inventory-product-decrease-${firstProductIndex}`
+    );
+
+    const initialQuantityText = await qtyLocator.textContent();
+    const initialQuantity = parseInt(initialQuantityText || "0", 10);
+
+    await test.step("increments quantity by 1 when clicking +", async () => {
+      await increaseButton.click();
+      await expect(qtyLocator).toHaveText(String(initialQuantity + 1));
+    });
+
+    await test.step("decrements quantity by 1 when clicking -", async () => {
+      await decreaseButton.click();
+      await expect(qtyLocator).toHaveText(String(initialQuantity));
+    });
+  });
+
+  test("does not go below 0 when decreasing quantity (uses a product with 0 quantity)", async ({
+    page,
+  }) => {
+    // In your sample HTML, product-6 (Invisible Pen) starts at 0
+    const zeroQtyIndex = 6;
+
+    const qtyLocator = page.getByTestId(
+      `inventory-product-quantity-${zeroQtyIndex}`
+    );
+    const decreaseButton = page.getByTestId(
+      `inventory-product-decrease-${zeroQtyIndex}`
+    );
+
+    await test.step("ensures starting quantity is 0", async () => {
+      await expect(qtyLocator).toHaveText("0");
+    });
+
+    await test.step("clicks - and keeps quantity at 0", async () => {
+      await decreaseButton.click();
+      await expect(qtyLocator).toHaveText("0");
+    });
+  });
 });
