@@ -1,7 +1,13 @@
 import { test, expect, Page } from "@playwright/test";
 
-async function openCatalogPage(page: Page) {
+async function openInventoryPage(page: Page) {
   await page.goto("/store");
+  await page.getByTestId("store-tab-inventory").click();
+  await expect(page.getByTestId("inventory-page")).toBeVisible();
+}
+
+async function openCatalogPage(page: Page, reload: boolean = true) {
+  if (reload) await page.goto("/store");
   await page.getByTestId("store-tab-catalog").click();
   await expect(page.getByTestId("catalog-page")).toBeVisible();
 }
@@ -117,6 +123,56 @@ test.describe("Store - Catalog", () => {
     await test.step("decrements quantity after another click", async () => {
       await addButton.click();
       await expect(quantity).toHaveText(`${initialQty - 2} units`);
+    });
+  });
+
+  test("product added in inventory appears in catalog with same price and quantity", async ({
+    page,
+  }) => {
+    const newProductName = "Catalog Sync Test Product";
+    const priceValue = "13.37";
+    const quantityValue = "3";
+
+    await test.step("create product in Inventory", async () => {
+      await openInventoryPage(page);
+
+      await page.getByTestId("inventory-input-name").fill(newProductName);
+      await page.getByTestId("inventory-input-price").fill(priceValue);
+      await page.getByTestId("inventory-input-quantity").fill(quantityValue);
+      await page.getByTestId("inventory-submit-button").click();
+
+      // ensure it was added on the inventory side (last product)
+      const invList = page.getByTestId("inventory-product-list");
+      const invItems = invList.locator('li[data-testid^="inventory-product-"]');
+      const invCount = await invItems.count();
+      const invIndex = invCount - 1;
+
+      await expect(
+        page.getByTestId(`inventory-product-name-${invIndex}`)
+      ).toHaveText(newProductName);
+      await expect(
+        page.getByTestId(`inventory-product-price-value-${invIndex}`)
+      ).toHaveText(priceValue);
+      await expect(
+        page.getByTestId(`inventory-product-quantity-${invIndex}`)
+      ).toHaveText("3");
+    });
+
+    await test.step("open Catalog and find the new product", async () => {
+      await openCatalogPage(page, false);
+
+      const list = page.getByTestId("catalog-list");
+      const items = list.locator('li[data-testid^="catalog-item-"]');
+      const count = await items.count();
+      const lastIndex = count - 1;
+
+      const name = page.getByTestId(`catalog-item-name-${lastIndex}`);
+      const price = page.getByTestId(`catalog-item-price-value-${lastIndex}`);
+      const quantity = page.getByTestId(`catalog-item-quantity-${lastIndex}`);
+
+      await expect(name).toHaveText(newProductName);
+      await expect(price).toHaveText(priceValue);
+      await expect(quantity).toHaveText("3 units");
     });
   });
 });
