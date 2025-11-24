@@ -112,4 +112,34 @@ test.describe("Store - Home", () => {
       });
     });
   });
+
+  test.describe("Payment section", () => {
+    test("shows Payment icon, title, and description", async ({ page }) => {
+      const section = page.getByTestId("instructions-section-payment");
+
+      await test.step("section is visible", async () => {
+        await expect(section).toBeVisible();
+      });
+
+      await test.step("icon is visible", async () => {
+        await expect(
+          page.getByTestId("instructions-icon-payment")
+        ).toBeVisible();
+      });
+
+      await test.step("title text is correct", async () => {
+        const title = page.getByTestId("instructions-payment-title");
+        await expect(title).toBeVisible();
+        await expect(title).toHaveText("Payment");
+      });
+
+      await test.step("description text is correct", async () => {
+        const text = page.getByTestId("instructions-payment-text");
+        await expect(text).toBeVisible();
+        await expect(text).toHaveText(
+          "You’ll see a full summary of the cart items. Select a payment method to complete your purchase."
+        );
+      });
+    });
+  });
 });
