@@ -90,4 +90,33 @@ test.describe("Store - Catalog", () => {
       await expect(addButton).toHaveText("Out of Stock");
     });
   });
+
+  test("clicking Add to Cart decrements available quantity", async ({
+    page,
+  }) => {
+    // I choose a product with stock > 0 so this case catalog-item-1
+    const index = 1;
+
+    const quantity = page.getByTestId(`catalog-item-quantity-${index}`);
+    const addButton = page.getByTestId(`catalog-item-add-button-${index}`);
+
+    const initialText = await quantity.textContent();
+    const initialQty = parseInt(initialText || "0", 10);
+
+    await test.step("has a positive starting quantity and enabled button", async () => {
+      expect(initialQty).toBeGreaterThan(0);
+      await expect(addButton).toBeEnabled();
+      await expect(addButton).toHaveText("Add to Cart");
+    });
+
+    await test.step("decrements quantity after one click", async () => {
+      await addButton.click();
+      await expect(quantity).toHaveText(`${initialQty - 1} units`);
+    });
+
+    await test.step("decrements quantity after another click", async () => {
+      await addButton.click();
+      await expect(quantity).toHaveText(`${initialQty - 2} units`);
+    });
+  });
 });
