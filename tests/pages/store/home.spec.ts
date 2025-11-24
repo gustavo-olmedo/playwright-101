@@ -82,4 +82,34 @@ test.describe("Store - Home", () => {
       });
     });
   });
+
+  test.describe("Catalog section", () => {
+    test("shows Catalog icon, title, and description", async ({ page }) => {
+      const section = page.getByTestId("instructions-section-catalog");
+
+      await test.step("section is visible", async () => {
+        await expect(section).toBeVisible();
+      });
+
+      await test.step("icon is visible", async () => {
+        await expect(
+          page.getByTestId("instructions-icon-catalog")
+        ).toBeVisible();
+      });
+
+      await test.step("title text is correct", async () => {
+        const title = page.getByTestId("instructions-catalog-title");
+        await expect(title).toBeVisible();
+        await expect(title).toHaveText("Catalog");
+      });
+
+      await test.step("description text is correct", async () => {
+        const text = page.getByTestId("instructions-catalog-text");
+        await expect(text).toBeVisible();
+        await expect(text).toHaveText(
+          "Browse the available products, view details, and add them to your cart for purchase."
+        );
+      });
+    });
+  });
 });
