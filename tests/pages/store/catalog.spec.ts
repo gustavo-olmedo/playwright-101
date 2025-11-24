@@ -71,4 +71,23 @@ test.describe("Store - Catalog", () => {
       await expect(addButton).toHaveText("Add to Cart");
     });
   });
+
+  test("disables Add to Cart and shows Out of Stock when quantity is 0", async ({
+    page,
+  }) => {
+    // The item-6 have "0 units" and Out of Stock so I'll use it to validate
+    const index = 6;
+
+    const quantity = page.getByTestId(`catalog-item-quantity-${index}`);
+    const addButton = page.getByTestId(`catalog-item-add-button-${index}`);
+
+    await test.step("shows 0 units", async () => {
+      await expect(quantity).toHaveText("0 units");
+    });
+
+    await test.step("shows disabled Out of Stock button", async () => {
+      await expect(addButton).toBeDisabled();
+      await expect(addButton).toHaveText("Out of Stock");
+    });
+  });
 });
