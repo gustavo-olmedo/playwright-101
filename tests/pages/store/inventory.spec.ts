@@ -208,7 +208,7 @@ test.describe("Store - Inventory", () => {
   test("does not go below 0 when decreasing quantity (uses a product with 0 quantity)", async ({
     page,
   }) => {
-    // In your sample HTML, product-6 (Invisible Pen) starts at 0
+    // product-6 starts at 0 so we use that
     const zeroQtyIndex = 6;
 
     const qtyLocator = page.getByTestId(
@@ -225,6 +225,23 @@ test.describe("Store - Inventory", () => {
     await test.step("clicks - and keeps quantity at 0", async () => {
       await decreaseButton.click();
       await expect(qtyLocator).toHaveText("0");
+    });
+  });
+
+  test("price and quantity inputs accept decimal values", async ({ page }) => {
+    const priceInput = page.getByTestId("inventory-input-price");
+    const quantityInput = page.getByTestId("inventory-input-quantity");
+
+    await test.step("fills decimal values in numeric inputs", async () => {
+      await priceInput.fill("12.34");
+      await quantityInput.fill("5.67");
+    });
+
+    await test.step("checks that the raw input values include decimals", async () => {
+      await expect(priceInput).toHaveValue("12.34");
+
+      const quantityValue = await quantityInput.inputValue();
+      expect(quantityValue).toContain(".");
     });
   });
 });
