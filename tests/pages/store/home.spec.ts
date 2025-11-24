@@ -52,4 +52,34 @@ test.describe("Store - Home", () => {
 
     expect(testIds).toEqual(expectedOrder);
   });
+
+  test.describe("Inventory section", () => {
+    test("shows Inventory icon, title, and description", async ({ page }) => {
+      const section = page.getByTestId("instructions-section-inventory");
+
+      await test.step("section is visible", async () => {
+        await expect(section).toBeVisible();
+      });
+
+      await test.step("icon is visible", async () => {
+        await expect(
+          page.getByTestId("instructions-icon-inventory")
+        ).toBeVisible();
+      });
+
+      await test.step("title text is correct", async () => {
+        const title = page.getByTestId("instructions-inventory-title");
+        await expect(title).toBeVisible();
+        await expect(title).toHaveText("Inventory");
+      });
+
+      await test.step("description text is correct", async () => {
+        const text = page.getByTestId("instructions-inventory-text");
+        await expect(text).toBeVisible();
+        await expect(text).toHaveText(
+          "Manage the store’s inventory and register new products by defining their name, price, and initial quantity."
+        );
+      });
+    });
+  });
 });
