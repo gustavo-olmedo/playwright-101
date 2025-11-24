@@ -175,4 +175,60 @@ test.describe("Store - Catalog", () => {
       await expect(quantity).toHaveText("3 units");
     });
   });
+
+  test("when stock reaches 0, Add to Cart becomes disabled and shows Out of Stock", async ({
+    page,
+  }) => {
+    const newProductName = "One Unit Only Product";
+    const priceValue = "9.99";
+    const quantityValue = "1";
+
+    await test.step("create a 1-quantity product in Inventory", async () => {
+      await openInventoryPage(page);
+
+      await page.getByTestId("inventory-input-name").fill(newProductName);
+      await page.getByTestId("inventory-input-price").fill(priceValue);
+      await page.getByTestId("inventory-input-quantity").fill(quantityValue);
+      await page.getByTestId("inventory-submit-button").click();
+    });
+
+    await test.step("find that product in the Catalog", async () => {
+      await openCatalogPage(page, false);
+
+      const list = page.getByTestId("catalog-list");
+      const items = list.locator('li[data-testid^="catalog-item-"]');
+      const count = await items.count();
+
+      let targetIndex: number | null = null;
+
+      for (let i = 0; i < count; i++) {
+        const nameLocator = page.getByTestId(`catalog-item-name-${i}`);
+        const nameText = await nameLocator.textContent();
+        if (nameText?.trim() === newProductName) {
+          targetIndex = i;
+          break;
+        }
+      }
+
+      expect(targetIndex).not.toBeNull();
+      const index = targetIndex as number;
+
+      const quantity = page.getByTestId(`catalog-item-quantity-${index}`);
+      const addButton = page.getByTestId(`catalog-item-add-button-${index}`);
+
+      await expect(quantity).toHaveText("1 units");
+      await expect(addButton).toBeEnabled();
+      await expect(addButton).toHaveText("Add to Cart");
+
+      await test.step("click Add to Cart once to reach 0 stock", async () => {
+        await addButton.click();
+        await expect(quantity).toHaveText("0 units");
+      });
+
+      await test.step("button becomes disabled and shows Out of Stock", async () => {
+        await expect(addButton).toBeDisabled();
+        await expect(addButton).toHaveText("Out of Stock");
+      });
+    });
+  });
 });
