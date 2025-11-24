@@ -79,4 +79,24 @@ test.describe("Store - Inventory", () => {
 
     await page.getByTestId("inventory-submit-button").click();
   });
+
+  test("shows alert if any required field is missing", async ({ page }) => {
+    await page.getByTestId("inventory-input-name").fill("Test Product");
+    await page.getByTestId("inventory-input-price").fill("10.5");
+
+    let dialogMessage: string | null = null;
+
+    page.once("dialog", async (dialog) => {
+      dialogMessage = dialog.message();
+      await dialog.accept();
+    });
+
+    await test.step("submits with one missing field", async () => {
+      await page.getByTestId("inventory-submit-button").click();
+    });
+
+    await test.step("verifies same alert is shown", async () => {
+      expect.soft(dialogMessage).toBe("Please fill in all fields!");
+    });
+  });
 });
