@@ -12,6 +12,12 @@ async function openCatalogPage(page: Page, reload: boolean = true) {
   await expect(page.getByTestId("catalog-page")).toBeVisible();
 }
 
+async function openInventoryPage(page: Page) {
+  await page.goto("/store");
+  await page.getByTestId("store-tab-inventory").click();
+  await expect(page.getByTestId("inventory-page")).toBeVisible();
+}
+
 async function findCatalogItemIndexByName(page: Page, productName: string) {
   const list = page.getByTestId("catalog-list");
   const items = list.locator('li[data-testid^="catalog-item-"]');
@@ -243,6 +249,52 @@ test.describe("Store - Cart", () => {
         (quantityNow * baseline.price).toFixed(2)
       );
       expect(rowTotalNow).toBe(expectedRowTotal);
+    });
+  });
+
+  test("new product created in inventory can be added via catalog and appears in cart", async ({
+    page,
+  }) => {
+    const productName = "Cart New Product";
+    const priceValue = "7.77";
+    const quantityValue = "4.2"; // inventory stores 4 units
+
+    await test.step("create product in Inventory", async () => {
+      await openInventoryPage(page);
+
+      await page.getByTestId("inventory-input-name").fill(productName);
+      await page.getByTestId("inventory-input-price").fill(priceValue);
+      await page.getByTestId("inventory-input-quantity").fill(quantityValue);
+      await page.getByTestId("inventory-submit-button").click();
+    });
+
+    await test.step("add product once from Catalog", async () => {
+      await addToCartFromCatalog(page, productName, 1);
+    });
+
+    await test.step("cart contains new product with correct quantity, price, and row total", async () => {
+      await openCartPage(page, false);
+
+      const index = await findCartItemIndexByName(page, productName);
+      expect(index).not.toBeNull();
+
+      const i = index as number;
+
+      await expect(page.getByTestId(`cart-item-name-${i}`)).toHaveText(
+        productName
+      );
+      await expect(page.getByTestId(`cart-item-price-value-${i}`)).toHaveText(
+        priceValue
+      );
+      await expect(page.getByTestId(`cart-item-quantity-${i}`)).toHaveText("1");
+
+      const rowTotalText = await page
+        .getByTestId(`cart-item-total-value-${i}`)
+        .textContent();
+      const rowTotal = parseFloat((rowTotalText || "0").trim());
+      const expected = parseFloat(priceValue);
+
+      expect(rowTotal).toBe(expected);
     });
   });
 });
