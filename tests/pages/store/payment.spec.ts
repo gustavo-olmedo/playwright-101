@@ -320,4 +320,24 @@ test.describe("Store - Payment", () => {
       expect(paymentTotal).toBe(cartSnapshot.total);
     });
   });
+
+  test("shows alert if confirming payment without selecting a payment method", async ({
+    page,
+  }) => {
+    await setupPaymentWithItems(page);
+
+    await test.step("register dialog handler", async () => {
+      page.once("dialog", async (dialog) => {
+        await expect
+          .soft(dialog.message())
+          .toBe("Please select a payment method!");
+        await dialog.accept();
+      });
+    });
+
+    await test.step("click Confirm Payment with no method selected", async () => {
+      const confirmButton = page.getByTestId("payment-confirm-button");
+      await confirmButton.click();
+    });
+  });
 });
