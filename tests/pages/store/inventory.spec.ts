@@ -58,4 +58,25 @@ test.describe("Store - Inventory", () => {
       expect(count).toBeGreaterThan(0);
     });
   });
+
+  test("shows alert if form is submitted with empty inputs", async ({
+    page,
+  }) => {
+    // using the once is the only way I could make it work
+    // tried with:
+    //   const [dialog] = await Promise.all([
+    //     page.waitForEvent("dialog"),
+    //     page.getByTestId("inventory-submit-button").click(),
+    //   ]);
+    // and also just const dialog = await page.waitForEvent("dialog")
+    page.once("dialog", async (dialog) => {
+      // I notice this in the documentation about assertions
+      // "Use `expect.soft` for non-terminating failures."
+      // ref: https://playwright.dev/docs/test-assertions
+      expect.soft(dialog.message()).toBe("Please fill in all fields!");
+      await dialog.accept();
+    });
+
+    await page.getByTestId("inventory-submit-button").click();
+  });
 });
