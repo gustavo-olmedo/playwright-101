@@ -98,4 +98,38 @@ test.describe("Store - Cart", () => {
       await expect(page.getByTestId("cart-total-value")).toBeVisible();
     });
   });
+
+  test("each cart item total equals quantity × price", async ({ page }) => {
+    await test.step("create a cart with two items from catalog", async () => {
+      await addToCartFromCatalog(page, "Giant Rubber Duck", 1);
+      await addToCartFromCatalog(page, "Bacon-Scented Candle", 1);
+    });
+
+    await openCartPage(page, false);
+
+    const list = page.getByTestId("cart-list");
+    const items = list.locator('li[data-testid^="cart-item-"]');
+    const count = await items.count();
+
+    for (let i = 0; i < count; i++) {
+      await test.step(`validates row total for cart item ${i}`, async () => {
+        const quantityText = await page
+          .getByTestId(`cart-item-quantity-${i}`)
+          .textContent();
+        const priceText = await page
+          .getByTestId(`cart-item-price-value-${i}`)
+          .textContent();
+        const rowTotalText = await page
+          .getByTestId(`cart-item-total-value-${i}`)
+          .textContent();
+
+        const quantity = parseFloat((quantityText || "0").trim());
+        const price = parseFloat((priceText || "0").trim());
+        const rowTotal = parseFloat((rowTotalText || "0").trim());
+
+        const expectedRowTotal = parseFloat((quantity * price).toFixed(2));
+        expect(rowTotal).toBe(expectedRowTotal);
+      });
+    }
+  });
 });
