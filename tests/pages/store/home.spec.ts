@@ -113,6 +113,34 @@ test.describe("Store - Home", () => {
     });
   });
 
+  test.describe("Cart section", () => {
+    test("shows Cart icon, title, and description", async ({ page }) => {
+      const section = page.getByTestId("instructions-section-cart");
+
+      await test.step("section is visible", async () => {
+        await expect(section).toBeVisible();
+      });
+
+      await test.step("icon is visible", async () => {
+        await expect(page.getByTestId("instructions-icon-cart")).toBeVisible();
+      });
+
+      await test.step("title text is correct", async () => {
+        const title = page.getByTestId("instructions-cart-title");
+        await expect(title).toBeVisible();
+        await expect(title).toHaveText("Cart");
+      });
+
+      await test.step("description text is correct", async () => {
+        const text = page.getByTestId("instructions-cart-text");
+        await expect(text).toBeVisible();
+        await expect(text).toHaveText(
+          "View the items you’ve added. Quantities can be updated only inside the Catalog. When ready, proceed to checkout."
+        );
+      });
+    });
+  });
+
   test.describe("Payment section", () => {
     test("shows Payment icon, title, and description", async ({ page }) => {
       const section = page.getByTestId("instructions-section-payment");
