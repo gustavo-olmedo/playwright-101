@@ -173,4 +173,33 @@ test.describe("Store - Payment", () => {
       await expect(confirmButton).toHaveText("Confirm Payment");
     });
   });
+
+  test("each payment item total equals quantity × price", async ({ page }) => {
+    await setupPaymentWithItems(page);
+
+    const list = page.getByTestId("payment-cart-list");
+    const items = list.locator('[data-testid^="payment-cart-item-"]');
+    const count = await items.count();
+
+    for (let i = 0; i < count; i++) {
+      await test.step(`validates row total for payment item ${i}`, async () => {
+        const quantityText = await page
+          .getByTestId(`payment-item-quantity-${i}`)
+          .textContent();
+        const priceText = await page
+          .getByTestId(`payment-item-price-value-${i}`)
+          .textContent();
+        const rowTotalText = await page
+          .getByTestId(`payment-item-total-value-${i}`)
+          .textContent();
+
+        const quantity = parseFloat((quantityText || "0").trim());
+        const price = parseFloat((priceText || "0").trim());
+        const rowTotal = parseFloat((rowTotalText || "0").trim());
+
+        const expectedRowTotal = parseFloat((quantity * price).toFixed(2));
+        expect(rowTotal).toBe(expectedRowTotal);
+      });
+    }
+  });
 });
