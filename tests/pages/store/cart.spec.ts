@@ -28,12 +28,28 @@ async function findCatalogItemIndexByName(page: Page, productName: string) {
   return null;
 }
 
+async function findCartItemIndexByName(page: Page, productName: string) {
+  const list = page.getByTestId("cart-list");
+  const items = list.locator('[data-testid^="cart-item-"]');
+  const count = await items.count();
+
+  for (let i = 0; i < count; i++) {
+    const nameLocator = page.getByTestId(`cart-item-name-${i}`);
+    const nameText = (await nameLocator.textContent())?.trim();
+    if (nameText === productName) {
+      return i;
+    }
+  }
+
+  return null;
+}
+
 async function addToCartFromCatalog(
   page: Page,
   productName: string,
   times = 1
 ) {
-  await openCatalogPage(page);
+  await openCatalogPage(page, false);
 
   const index = await findCatalogItemIndexByName(page, productName);
   expect(index).not.toBeNull();
@@ -162,5 +178,71 @@ test.describe("Store - Cart", () => {
     const expectedSum = parseFloat(sum.toFixed(2));
 
     expect(cartTotal).toBe(expectedSum);
+  });
+
+  test("adding from catalog increases quantity and row total in cart", async ({
+    page,
+  }) => {
+    const productName = "Giant Rubber Duck";
+    let baseline: {
+      index: number;
+      quantity: number;
+      price: number;
+      rowTotal: number;
+    };
+
+    await test.step("start with a single unit of the product in cart", async () => {
+      await addToCartFromCatalog(page, productName, 1);
+      await openCartPage(page, false);
+
+      const index = await findCartItemIndexByName(page, productName);
+      expect(index).not.toBeNull();
+      const i = index as number;
+
+      const quantityText = await page
+        .getByTestId(`cart-item-quantity-${i}`)
+        .textContent();
+      const priceText = await page
+        .getByTestId(`cart-item-price-value-${i}`)
+        .textContent();
+      const rowTotalText = await page
+        .getByTestId(`cart-item-total-value-${i}`)
+        .textContent();
+
+      baseline = {
+        index: i,
+        quantity: parseFloat((quantityText || "0").trim()),
+        price: parseFloat((priceText || "0").trim()),
+        rowTotal: parseFloat((rowTotalText || "0").trim()),
+      };
+
+      expect(baseline.quantity).toBeGreaterThan(0);
+    });
+
+    await test.step("add one more unit from catalog", async () => {
+      await addToCartFromCatalog(page, productName, 1);
+    });
+
+    await test.step("cart quantity and row total are updated", async () => {
+      await openCartPage(page, false);
+
+      const i = baseline.index;
+      const quantityText = await page
+        .getByTestId(`cart-item-quantity-${i}`)
+        .textContent();
+      const rowTotalText = await page
+        .getByTestId(`cart-item-total-value-${i}`)
+        .textContent();
+
+      const quantityNow = parseFloat((quantityText || "0").trim());
+      const rowTotalNow = parseFloat((rowTotalText || "0").trim());
+
+      expect(quantityNow).toBe(baseline.quantity + 1);
+
+      const expectedRowTotal = parseFloat(
+        (quantityNow * baseline.price).toFixed(2)
+      );
+      expect(rowTotalNow).toBe(expectedRowTotal);
+    });
   });
 });
