@@ -1,233 +1,138 @@
-import { test, expect, Page } from "@playwright/test";
-
-async function openInventoryPage(page: Page) {
-  await page.goto("/store");
-  await page.getByTestId("store-tab-inventory").click();
-  await expect(page.getByTestId("inventory-page")).toBeVisible();
-}
-
-async function openCatalogPage(page: Page, reload: boolean = true) {
-  if (reload) await page.goto("/store");
-  await page.getByTestId("store-tab-catalog").click();
-  await expect(page.getByTestId("catalog-page")).toBeVisible();
-}
+import { test, expect } from "@playwright/test";
+import { StoreApp } from "../../../pages/StoreApp";
+import { CatalogPage } from "../../../pages/CatalogPage";
 
 test.describe("Store - Catalog", () => {
   test.beforeEach(async ({ page }) => {
-    await openCatalogPage(page);
+    const app = new StoreApp(page);
+    await app.goto();
+    await app.openCatalog();
   });
 
   test("renders catalog layout and product list", async ({ page }) => {
+    const catalog = new CatalogPage(page);
+
     await test.step("shows catalog container and title", async () => {
-      await expect(page.getByTestId("catalog-page")).toBeVisible();
-
-      const title = page.getByTestId("catalog-title");
-      await expect(title).toBeVisible();
-      await expect(title).toHaveText("Product Catalog");
+      await catalog.expectContainerAndTitle();
     });
 
     await test.step("shows catalog list with at least one item", async () => {
-      const list = page.getByTestId("catalog-list");
-      await expect(list).toBeVisible();
-
-      const items = list.locator('[data-testid^="catalog-item-"]');
-      const count = await items.count();
-      expect(count).toBeGreaterThan(0);
+      await catalog.expectListHasItems();
     });
 
-    await test.step("validates basic structure of the first item", async () => {
-      const index = 1;
-      const name = page.getByTestId(`catalog-item-name-${index}`);
-      const priceLabel = page.getByTestId(`catalog-item-price-label-${index}`);
-      const priceValue = page.getByTestId(`catalog-item-price-value-${index}`);
-      const quantity = page.getByTestId(`catalog-item-quantity-${index}`);
-      const addButton = page.getByTestId(`catalog-item-add-button-${index}`);
-
-      await expect(name).toBeVisible();
-      await expect(priceLabel).toHaveText("Price: €");
-      await expect(priceValue).toBeVisible();
-      await expect(quantity).toContainText("units");
-      await expect(addButton).toBeVisible();
-      await expect(addButton).toHaveText("Add to Cart");
-    });
-
-    await test.step("shows catalog list with at least one item", async () => {
-      const list = page.getByTestId("catalog-list");
-      await expect(list).toBeVisible();
-
-      const items = list.locator('[data-testid^="catalog-item-"]');
-      const count = await items.count();
-      expect(count).toBeGreaterThan(0);
-    });
-
-    await test.step("validates basic structure of the first item", async () => {
-      const index = 1; // pick a known in-stock item from your sample (Giant Rubber Duck)
-
-      const name = page.getByTestId(`catalog-item-name-${index}`);
-      const priceLabel = page.getByTestId(`catalog-item-price-label-${index}`);
-      const priceValue = page.getByTestId(`catalog-item-price-value-${index}`);
-      const quantity = page.getByTestId(`catalog-item-quantity-${index}`);
-      const addButton = page.getByTestId(`catalog-item-add-button-${index}`);
-
-      await expect(name).toBeVisible();
-      await expect(priceLabel).toHaveText("Price: €");
-      await expect(priceValue).toBeVisible();
-      await expect(quantity).toContainText("units");
-      await expect(addButton).toBeVisible();
-      await expect(addButton).toHaveText("Add to Cart");
+    await test.step("validates basic structure of a known in-stock item", async () => {
+      const index = 1; // Giant Rubber Duck (in stock)
+      await catalog.expectItemBasicStructure(index, {
+        expectedButtonText: "Add to Cart",
+      });
     });
   });
 
   test("disables Add to Cart and shows Out of Stock when quantity is 0", async ({
     page,
   }) => {
-    // The item-6 have "0 units" and Out of Stock so I'll use it to validate
-    const index = 6;
+    const catalog = new CatalogPage(page);
+    const index = 6; // Invisible Pen: 0 units, Out of Stock
 
-    const quantity = page.getByTestId(`catalog-item-quantity-${index}`);
-    const addButton = page.getByTestId(`catalog-item-add-button-${index}`);
-
-    await test.step("shows 0 units", async () => {
-      await expect(quantity).toHaveText("0 units");
-    });
-
-    await test.step("shows disabled Out of Stock button", async () => {
-      await expect(addButton).toBeDisabled();
-      await expect(addButton).toHaveText("Out of Stock");
+    await test.step("shows 0 units and disabled Out of Stock button", async () => {
+      await catalog.expectOutOfStock(index);
     });
   });
 
   test("clicking Add to Cart decrements available quantity", async ({
     page,
   }) => {
-    // I choose a product with stock > 0 so this case catalog-item-1
-    const index = 1;
+    const catalog = new CatalogPage(page);
+    const index = 1; // Giant Rubber Duck: stock > 0
 
-    const quantity = page.getByTestId(`catalog-item-quantity-${index}`);
-    const addButton = page.getByTestId(`catalog-item-add-button-${index}`);
-
-    const initialText = await quantity.textContent();
-    const initialQty = parseInt(initialText || "0", 10);
+    const initialQty = await catalog.getItemQuantityNumber(index);
 
     await test.step("has a positive starting quantity and enabled button", async () => {
       expect(initialQty).toBeGreaterThan(0);
-      await expect(addButton).toBeEnabled();
-      await expect(addButton).toHaveText("Add to Cart");
+      await expect(catalog.addToCartButton(index)).toBeEnabled();
+      await expect(catalog.addToCartButton(index)).toHaveText("Add to Cart");
     });
 
     await test.step("decrements quantity after one click", async () => {
-      await addButton.click();
-      await expect(quantity).toHaveText(`${initialQty - 1} units`);
+      await catalog.clickAddToCart(index);
+      await expect(catalog.itemQuantity(index)).toHaveText(
+        `${initialQty - 1} units`
+      );
     });
 
     await test.step("decrements quantity after another click", async () => {
-      await addButton.click();
-      await expect(quantity).toHaveText(`${initialQty - 2} units`);
+      await catalog.clickAddToCart(index);
+      await expect(catalog.itemQuantity(index)).toHaveText(
+        `${initialQty - 2} units`
+      );
     });
   });
 
   test("product added in inventory appears in catalog with same price and quantity", async ({
     page,
   }) => {
+    const app = new StoreApp(page);
     const newProductName = "Catalog Sync Test Product";
     const priceValue = "13.37";
     const quantityValue = "3";
 
     await test.step("create product in Inventory", async () => {
-      await openInventoryPage(page);
+      const inventory = await app.openInventory();
 
-      await page.getByTestId("inventory-input-name").fill(newProductName);
-      await page.getByTestId("inventory-input-price").fill(priceValue);
-      await page.getByTestId("inventory-input-quantity").fill(quantityValue);
-      await page.getByTestId("inventory-submit-button").click();
+      await inventory.addProduct(newProductName, priceValue, quantityValue);
 
-      // ensure it was added on the inventory side (last product)
-      const invList = page.getByTestId("inventory-product-list");
-      const invItems = invList.locator('li[data-testid^="inventory-product-"]');
-      const invCount = await invItems.count();
+      const invCount = await inventory.getProductCount();
       const invIndex = invCount - 1;
 
-      await expect(
-        page.getByTestId(`inventory-product-name-${invIndex}`)
-      ).toHaveText(newProductName);
-      await expect(
-        page.getByTestId(`inventory-product-price-value-${invIndex}`)
-      ).toHaveText(priceValue);
-      await expect(
-        page.getByTestId(`inventory-product-quantity-${invIndex}`)
-      ).toHaveText("3");
+      await expect(inventory.productName(invIndex)).toHaveText(newProductName);
+      await expect(inventory.productPriceValue(invIndex)).toHaveText(
+        priceValue
+      );
+      await expect(inventory.productQuantity(invIndex)).toHaveText("3");
     });
 
     await test.step("open Catalog and find the new product", async () => {
-      await openCatalogPage(page, false);
+      const catalog = await app.openCatalog();
 
-      const list = page.getByTestId("catalog-list");
-      const items = list.locator('li[data-testid^="catalog-item-"]');
-      const count = await items.count();
+      const count = await catalog.getItemCount();
       const lastIndex = count - 1;
 
-      const name = page.getByTestId(`catalog-item-name-${lastIndex}`);
-      const price = page.getByTestId(`catalog-item-price-value-${lastIndex}`);
-      const quantity = page.getByTestId(`catalog-item-quantity-${lastIndex}`);
-
-      await expect(name).toHaveText(newProductName);
-      await expect(price).toHaveText(priceValue);
-      await expect(quantity).toHaveText("3 units");
+      await expect(catalog.itemName(lastIndex)).toHaveText(newProductName);
+      await expect(catalog.itemPriceValue(lastIndex)).toHaveText(priceValue);
+      await expect(catalog.itemQuantity(lastIndex)).toHaveText("3 units");
     });
   });
 
   test("when stock reaches 0, Add to Cart becomes disabled and shows Out of Stock", async ({
     page,
   }) => {
+    const app = new StoreApp(page);
     const newProductName = "One Unit Only Product";
     const priceValue = "9.99";
     const quantityValue = "1";
 
     await test.step("create a 1-quantity product in Inventory", async () => {
-      await openInventoryPage(page);
-
-      await page.getByTestId("inventory-input-name").fill(newProductName);
-      await page.getByTestId("inventory-input-price").fill(priceValue);
-      await page.getByTestId("inventory-input-quantity").fill(quantityValue);
-      await page.getByTestId("inventory-submit-button").click();
+      const inventory = await app.openInventory();
+      await inventory.addProduct(newProductName, priceValue, quantityValue);
     });
 
     await test.step("find that product in the Catalog", async () => {
-      await openCatalogPage(page, false);
+      const catalog = await app.openCatalog();
 
-      const list = page.getByTestId("catalog-list");
-      const items = list.locator('li[data-testid^="catalog-item-"]');
-      const count = await items.count();
+      const index = await catalog.findItemIndexByName(newProductName);
+      expect(index).not.toBeNull();
+      const i = index as number;
 
-      let targetIndex: number | null = null;
-
-      for (let i = 0; i < count; i++) {
-        const nameLocator = page.getByTestId(`catalog-item-name-${i}`);
-        const nameText = await nameLocator.textContent();
-        if (nameText?.trim() === newProductName) {
-          targetIndex = i;
-          break;
-        }
-      }
-
-      expect(targetIndex).not.toBeNull();
-      const index = targetIndex as number;
-
-      const quantity = page.getByTestId(`catalog-item-quantity-${index}`);
-      const addButton = page.getByTestId(`catalog-item-add-button-${index}`);
-
-      await expect(quantity).toHaveText("1 units");
-      await expect(addButton).toBeEnabled();
-      await expect(addButton).toHaveText("Add to Cart");
+      await catalog.expectInStock(i, 1);
 
       await test.step("click Add to Cart once to reach 0 stock", async () => {
-        await addButton.click();
-        await expect(quantity).toHaveText("0 units");
+        await catalog.clickAddToCart(i);
+        await expect(catalog.itemQuantity(i)).toHaveText("0 units");
       });
 
       await test.step("button becomes disabled and shows Out of Stock", async () => {
-        await expect(addButton).toBeDisabled();
-        await expect(addButton).toHaveText("Out of Stock");
+        await expect(catalog.addToCartButton(i)).toBeDisabled();
+        await expect(catalog.addToCartButton(i)).toHaveText("Out of Stock");
       });
     });
   });
