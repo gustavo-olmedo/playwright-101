@@ -160,4 +160,37 @@ test.describe("Store - Orders", () => {
       await expect(totalValue).toBeVisible();
     });
   });
+
+  test("each order total equals sum of its item totals", async ({ page }) => {
+    await createSingleOrder(page);
+    const ordersList = page.getByTestId("orders-list");
+    const orders = ordersList.locator('>li[data-testid^="order-"]');
+    const orderCount = await orders.count();
+    for (let i = 0; i < orderCount; i++) {
+      await test.step(`validates total for order ${i}`, async () => {
+        const itemsList = page.getByTestId(`order-items-${i}`);
+        const orderItems = itemsList.locator(`li`);
+        const itemCount = await orderItems.count();
+        let sum = 0;
+        for (let j = 0; j < itemCount; j++) {
+          const itemTotalText = await page
+            .getByTestId(`order-item-total-value-${i}-${j}`)
+            .textContent();
+          const itemTotal = parseFloat((itemTotalText || "0").trim());
+          sum += itemTotal;
+          const nameText =
+            (
+              await page.getByTestId(`order-item-name-${i}-${j}`).textContent()
+            )?.trim() ?? "";
+          expect(nameText).toMatch(/^\d+ x /);
+        }
+        const orderTotalText = await page
+          .getByTestId(`order-total-value-${i}`)
+          .textContent();
+        const orderTotal = parseFloat((orderTotalText || "0").trim());
+        const expectedSum = parseFloat(sum.toFixed(2));
+        expect(orderTotal).toBe(expectedSum);
+      });
+    }
+  });
 });
