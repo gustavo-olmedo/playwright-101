@@ -1,201 +1,68 @@
-import { test, expect, Page } from "@playwright/test";
-
-async function openPaymentPage(page: Page) {
-  await page.goto("/store");
-  await page.getByTestId("store-tab-payments").click();
-  await expect(page.getByTestId("payment-page")).toBeVisible();
-}
-
-async function openCatalogTab(page: Page) {
-  await page.getByTestId("store-tab-catalog").click();
-  await expect(page.getByTestId("catalog-page")).toBeVisible();
-}
-
-async function openCartTab(page: Page) {
-  await page.getByTestId("store-tab-cart").click();
-  await expect(page.getByTestId("cart-page")).toBeVisible();
-}
-
-async function addToCartFromCatalog(
-  page: Page,
-  productName: string,
-  times = 1
-) {
-  const list = page.getByTestId("catalog-list");
-  const items = list.locator('[data-testid^="catalog-item-"]');
-  const count = await items.count();
-
-  let targetIndex: number | null = null;
-
-  for (let i = 0; i < count; i++) {
-    const nameLocator = page.getByTestId(`catalog-item-name-${i}`);
-    const nameText = (await nameLocator.textContent())?.trim();
-    if (nameText === productName) {
-      targetIndex = i;
-      break;
-    }
-  }
-
-  expect(targetIndex).not.toBeNull();
-  const index = targetIndex as number;
-
-  const button = page.getByTestId(`catalog-item-add-button-${index}`);
-
-  for (let t = 0; t < times; t++) {
-    await expect(button).toBeEnabled();
-    await button.click();
-  }
-}
-
-async function setupPaymentWithItems(page: Page) {
-  await openCatalogTab(page);
-  await addToCartFromCatalog(page, "Giant Rubber Duck", 1);
-  await openCartTab(page);
-
-  // From Cart, click Go to Payments
-  const goToPaymentButton = page.getByTestId("cart-go-to-payment");
-  await expect(goToPaymentButton).toBeVisible();
-  await goToPaymentButton.click();
-
-  // Back on Payment page, now with items
-  await expect(page.getByTestId("payment-page")).toBeVisible();
-}
+import { test, expect } from "@playwright/test";
+import { StoreApp } from "../../../pages/StoreApp";
+import { CartPage } from "../../../pages/CartPage";
+import { PaymentPage } from "../../../pages/PaymentPage";
+import {
+  addToCartFromCatalog,
+  setupPaymentWithItems,
+} from "../../../helpers/payment.helper";
 
 test.describe("Store - Payment", () => {
   test.beforeEach(async ({ page }) => {
-    await openPaymentPage(page);
+    const app = new StoreApp(page);
+    await app.goto();
+    await app.openPayment();
   });
 
   test("payment shows empty message when there are no items to pay", async ({
     page,
   }) => {
-    await openPaymentPage(page);
-
-    await expect(page.getByTestId("payment-title")).toHaveText("Payment");
-    await expect(page.getByTestId("payment-empty-message")).toBeVisible();
-    await expect(page.getByTestId("payment-empty-message")).toHaveText(
-      "No items to pay."
-    );
-
-    await expect(page.locator('[data-testid="payment-cart-list"]')).toHaveCount(
-      0
-    );
-    await expect(page.locator('[data-testid="payment-summary"]')).toHaveCount(
-      0
-    );
-    await expect(
-      page.locator('[data-testid="payment-methods-section"]')
-    ).toHaveCount(0);
-    await expect(
-      page.locator('[data-testid="payment-confirm-button"]')
-    ).toHaveCount(0);
+    const payment = new PaymentPage(page);
+    await payment.expectEmpty("No items to pay.");
   });
 
   test("renders payment layout, cart items, total and payment methods when there are items", async ({
     page,
   }) => {
-    await setupPaymentWithItems(page);
+    const payment = await setupPaymentWithItems(page);
 
     await test.step("shows payment container and title", async () => {
-      await expect(page.getByTestId("payment-page")).toBeVisible();
-      const title = page.getByTestId("payment-title");
-      await expect(title).toBeVisible();
-      await expect(title).toHaveText("Payment");
+      await payment.expectLoaded();
     });
 
     await test.step("shows cart items list with at least one item", async () => {
-      const list = page.getByTestId("payment-cart-list");
-      await expect(list).toBeVisible();
-
-      const items = list.locator('[data-testid^="payment-cart-item-"]');
-      const count = await items.count();
-      expect(count).toBeGreaterThan(0);
+      await payment.expectHasItemsAndSummary();
     });
 
     await test.step("checks structure of first payment item", async () => {
-      const index = 0;
-
-      const name = page.getByTestId(`payment-item-name-${index}`);
-      const quantity = page.getByTestId(`payment-item-quantity-${index}`);
-      const priceCurrency = page.getByTestId(
-        `payment-item-price-currency-${index}`
-      );
-      const priceValue = page.getByTestId(`payment-item-price-value-${index}`);
-      const totalCurrency = page.getByTestId(
-        `payment-item-total-currency-${index}`
-      );
-      const totalValue = page.getByTestId(`payment-item-total-value-${index}`);
-
-      await expect(name).toBeVisible();
-      await expect(quantity).toBeVisible();
-      await expect(priceCurrency).toHaveText("€");
-      await expect(priceValue).toBeVisible();
-      await expect(totalCurrency).toHaveText("€");
-      await expect(totalValue).toBeVisible();
+      await payment.expectItemStructure(0);
     });
 
     await test.step("shows payment summary and total", async () => {
-      const summary = page.getByTestId("payment-summary");
-      await expect(summary).toBeVisible();
-
-      const totalLabel = page.getByTestId("payment-total-label");
-      const totalValue = page.getByTestId("payment-total-value");
-
-      await expect(totalLabel).toHaveText("Total: €");
-      await expect(totalValue).toBeVisible();
+      await payment.expectHasItemsAndSummary();
     });
 
     await test.step("shows payment methods list and all methods are unselected", async () => {
-      const methodsSection = page.getByTestId("payment-methods-section");
-      await expect(methodsSection).toBeVisible();
-
-      const methodsLabel = page.getByTestId("payment-methods-label");
-      await expect(methodsLabel).toHaveText("Payment Method:");
-
       const methodIds = ["MBWay", "Klarna", "Multibanco", "PayPal", "Visa"];
-
-      for (const id of methodIds) {
-        const wrapper = page.getByTestId(`payment-method-${id}`);
-        const input = page.getByTestId(`payment-method-input-${id}`);
-        const label = page.getByTestId(`payment-method-label-${id}`);
-
-        await expect(wrapper).toBeVisible();
-        await expect(input).toBeVisible();
-        await expect(label).toBeVisible();
-        await expect(label).toHaveText(id);
-        await expect(input).not.toBeChecked();
-      }
+      await payment.expectMethodsUnselected(methodIds);
     });
 
     await test.step("shows Confirm Payment button", async () => {
-      const confirmButton = page.getByTestId("payment-confirm-button");
-      await expect(confirmButton).toBeVisible();
-      await expect(confirmButton).toHaveText("Confirm Payment");
+      await expect(payment.confirmButton).toBeVisible();
+      await expect(payment.confirmButton).toHaveText("Confirm Payment");
     });
   });
 
   test("each payment item total equals quantity × price", async ({ page }) => {
-    await setupPaymentWithItems(page);
+    const payment = await setupPaymentWithItems(page);
 
-    const list = page.getByTestId("payment-cart-list");
-    const items = list.locator('[data-testid^="payment-cart-item-"]');
-    const count = await items.count();
+    const count = await payment.getItemCount();
 
     for (let i = 0; i < count; i++) {
       await test.step(`validates row total for payment item ${i}`, async () => {
-        const quantityText = await page
-          .getByTestId(`payment-item-quantity-${i}`)
-          .textContent();
-        const priceText = await page
-          .getByTestId(`payment-item-price-value-${i}`)
-          .textContent();
-        const rowTotalText = await page
-          .getByTestId(`payment-item-total-value-${i}`)
-          .textContent();
-
-        const quantity = parseFloat((quantityText || "0").trim());
-        const price = parseFloat((priceText || "0").trim());
-        const rowTotal = parseFloat((rowTotalText || "0").trim());
+        const quantity = await payment.getItemQuantityNumber(i);
+        const price = await payment.getItemPriceNumber(i);
+        const rowTotal = await payment.getItemRowTotalNumber(i);
 
         const expectedRowTotal = parseFloat((quantity * price).toFixed(2));
         expect(rowTotal).toBe(expectedRowTotal);
@@ -204,26 +71,25 @@ test.describe("Store - Payment", () => {
   });
 
   test("payment items and total match the cart page", async ({ page }) => {
-    // Build cart with a few items, then go to Payment and compare
+    const app = new StoreApp(page);
+
     let cartSnapshot: {
       items: { name: string; quantity: number; price: number; total: number }[];
       total: number;
     };
 
     await test.step("build cart and capture snapshot", async () => {
-      // From Payment → Catalog
-      await openCatalogTab(page);
+      // From Payment -> Catalog
+      await app.openCatalog();
       await addToCartFromCatalog(page, "Giant Rubber Duck", 1);
       await addToCartFromCatalog(page, "Bacon-Scented Candle", 2);
 
       // Go to Cart
-      await openCartTab(page);
+      const cart = await app.openCart();
+      const cartPage = new CartPage(page);
 
-      const list = page.getByTestId("cart-list");
-      const items = list.locator('li[data-testid^="cart-item-"]');
-      const count = await items.count();
-
-      const result: {
+      const count = await cartPage.getItemCount();
+      const items: {
         name: string;
         quantity: number;
         price: number;
@@ -233,73 +99,38 @@ test.describe("Store - Payment", () => {
       let sum = 0;
 
       for (let i = 0; i < count; i++) {
-        const nameText = await page
-          .getByTestId(`cart-item-name-${i}`)
-          .textContent();
-        const quantityText = await page
-          .getByTestId(`cart-item-quantity-${i}`)
-          .textContent();
-        const priceText = await page
-          .getByTestId(`cart-item-price-value-${i}`)
-          .textContent();
-        const rowTotalText = await page
-          .getByTestId(`cart-item-total-value-${i}`)
-          .textContent();
+        const nameText =
+          (await cartPage.itemName(i).textContent())?.trim() || "";
+        const quantity = await cartPage.getItemQuantityNumber(i);
+        const price = await cartPage.getItemPriceNumber(i);
+        const total = await cartPage.getItemRowTotalNumber(i);
 
-        const quantity = parseFloat((quantityText || "0").trim());
-        const price = parseFloat((priceText || "0").trim());
-        const rowTotal = parseFloat((rowTotalText || "0").trim());
-
-        result.push({
-          name: (nameText || "").trim(),
-          quantity,
-          price,
-          total: rowTotal,
-        });
-
-        sum += rowTotal;
+        items.push({ name: nameText, quantity, price, total });
+        sum += total;
       }
 
-      const cartTotalText = await page
-        .getByTestId("cart-total-value")
-        .textContent();
-      const cartTotal = parseFloat((cartTotalText || "0").trim());
+      const cartTotal = await cartPage.getCartTotalNumber();
       expect(parseFloat(sum.toFixed(2))).toBe(cartTotal);
 
-      cartSnapshot = { items: result, total: cartTotal };
+      cartSnapshot = { items, total: cartTotal };
 
-      const goToPaymentButton = page.getByTestId("cart-go-to-payment");
-      await expect(goToPaymentButton).toBeVisible();
-      await goToPaymentButton.click();
-      await expect(page.getByTestId("payment-page")).toBeVisible();
+      await cart.goToPaymentsAndWait();
     });
 
     await test.step("verify payment page matches cart snapshot", async () => {
-      const list = page.getByTestId("payment-cart-list");
-      const items = list.locator('[data-testid^="payment-cart-item-"]');
-      const count = await items.count();
+      const payment = new PaymentPage(page);
 
+      const count = await payment.getItemCount();
       expect(count).toBe(cartSnapshot.items.length);
 
       let paymentSum = 0;
 
       for (let i = 0; i < count; i++) {
-        const nameText = (
-          await page.getByTestId(`payment-item-name-${i}`).textContent()
-        )?.trim();
-        const quantityText = await page
-          .getByTestId(`payment-item-quantity-${i}`)
-          .textContent();
-        const priceText = await page
-          .getByTestId(`payment-item-price-value-${i}`)
-          .textContent();
-        const totalText = await page
-          .getByTestId(`payment-item-total-value-${i}`)
-          .textContent();
-
-        const quantity = parseFloat((quantityText || "0").trim());
-        const price = parseFloat((priceText || "0").trim());
-        const total = parseFloat((totalText || "0").trim());
+        const nameText =
+          (await payment.itemName(i).textContent())?.trim() || "";
+        const quantity = await payment.getItemQuantityNumber(i);
+        const price = await payment.getItemPriceNumber(i);
+        const total = await payment.getItemRowTotalNumber(i);
 
         const fromCart = cartSnapshot.items[i];
 
@@ -311,11 +142,7 @@ test.describe("Store - Payment", () => {
         paymentSum += total;
       }
 
-      const paymentTotalText = await page
-        .getByTestId("payment-total-value")
-        .textContent();
-      const paymentTotal = parseFloat((paymentTotalText || "0").trim());
-
+      const paymentTotal = await payment.getPaymentTotalNumber();
       expect(paymentTotal).toBe(parseFloat(paymentSum.toFixed(2)));
       expect(paymentTotal).toBe(cartSnapshot.total);
     });
@@ -324,38 +151,27 @@ test.describe("Store - Payment", () => {
   test("shows alert if confirming payment without selecting a payment method", async ({
     page,
   }) => {
-    await setupPaymentWithItems(page);
-
-    await test.step("register dialog handler", async () => {
-      page.once("dialog", async (dialog) => {
-        await expect
-          .soft(dialog.message())
-          .toBe("Please select a payment method!");
-        await dialog.accept();
-      });
-    });
+    const payment = await setupPaymentWithItems(page);
 
     await test.step("click Confirm Payment with no method selected", async () => {
-      const confirmButton = page.getByTestId("payment-confirm-button");
-      await confirmButton.click();
+      await payment.confirmWithoutMethodExpectAlert(
+        "Please select a payment method!",
+        { soft: true }
+      );
     });
   });
 
   test("selecting a payment method and confirming navigates to Orders section", async ({
     page,
   }) => {
-    await setupPaymentWithItems(page);
+    const payment = await setupPaymentWithItems(page);
 
     await test.step("select a payment method", async () => {
-      const mbWayInput = page.getByTestId("payment-method-input-MBWay");
-      await expect(mbWayInput).not.toBeChecked();
-      await mbWayInput.check();
-      await expect(mbWayInput).toBeChecked();
+      await payment.selectMethod("MBWay");
     });
 
     await test.step("confirm payment", async () => {
-      const confirmButton = page.getByTestId("payment-confirm-button");
-      await confirmButton.click();
+      await payment.confirmPayment();
     });
 
     await test.step("lands on Orders page", async () => {
