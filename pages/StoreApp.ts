@@ -3,6 +3,7 @@ import { HomePage } from "./HomePage";
 import { InventoryPage } from "./InventoryPage";
 import { CatalogPage } from "./CatalogPage";
 import { CartPage } from "./CartPage";
+import { PaymentPage } from "./PaymentPage";
 
 const STORE_URL = "/store";
 
@@ -29,6 +30,10 @@ export class StoreApp {
     return this.page.getByTestId("store-tab-cart");
   }
 
+  private get paymentNav() {
+    return this.page.getByTestId("store-tab-payments");
+  }
+
   async openHome() {
     await this.homeNav.click();
     const page = new HomePage(this.page);
@@ -53,6 +58,13 @@ export class StoreApp {
   async openCart() {
     await this.cartNav.click();
     const page = new CartPage(this.page);
+    await page.expectLoaded();
+    return page;
+  }
+
+  async openPayment() {
+    await this.paymentNav.click();
+    const page = new PaymentPage(this.page);
     await page.expectLoaded();
     return page;
   }
