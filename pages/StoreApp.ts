@@ -4,6 +4,7 @@ import { InventoryPage } from "./InventoryPage";
 import { CatalogPage } from "./CatalogPage";
 import { CartPage } from "./CartPage";
 import { PaymentPage } from "./PaymentPage";
+import { OrdersPage } from "./OrdersPage";
 
 const STORE_URL = "/store";
 
@@ -32,6 +33,10 @@ export class StoreApp {
 
   private get paymentNav() {
     return this.page.getByTestId("store-tab-payments");
+  }
+
+  private get ordersNav() {
+    return this.page.getByTestId("store-tab-orders");
   }
 
   async openHome() {
@@ -65,6 +70,13 @@ export class StoreApp {
   async openPayment() {
     await this.paymentNav.click();
     const page = new PaymentPage(this.page);
+    await page.expectLoaded();
+    return page;
+  }
+
+  async openOrders() {
+    await this.ordersNav.click();
+    const page = new OrdersPage(this.page);
     await page.expectLoaded();
     return page;
   }
