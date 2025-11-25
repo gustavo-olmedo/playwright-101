@@ -1,99 +1,56 @@
-import { test, expect, Page } from "@playwright/test";
-
-async function openInventoryPage(page: Page) {
-  await page.goto("/store");
-  await page.getByTestId("store-tab-inventory").click();
-  await expect(page.getByTestId("inventory-page")).toBeVisible();
-}
+import { test, expect } from "@playwright/test";
+import { StoreApp } from "../../../pages/StoreApp";
+import { InventoryPage } from "../../../pages/InventoryPage";
 
 test.describe("Store - Inventory", () => {
   test.beforeEach(async ({ page }) => {
-    await openInventoryPage(page);
+    const app = new StoreApp(page);
+    await app.goto();
+    await app.openInventory();
   });
 
   test("renders inventory layout with form and initial product list", async ({
     page,
   }) => {
-    await test.step("shows inventory container and title", async () => {
-      await expect(page.getByTestId("inventory-page")).toBeVisible();
+    const inventory = new InventoryPage(page);
 
-      const title = page.getByTestId("inventory-title");
-      await expect(title).toBeVisible();
-      await expect(title).toHaveText("Inventory Management");
+    await test.step("shows inventory container and title", async () => {
+      await inventory.expectContainerAndTitle();
     });
 
     await test.step("shows form with three inputs", async () => {
-      const form = page.getByTestId("inventory-form");
-      await expect(form).toBeVisible();
-
-      const nameInput = page.getByTestId("inventory-input-name");
-      const priceInput = page.getByTestId("inventory-input-price");
-      const quantityInput = page.getByTestId("inventory-input-quantity");
-
-      await expect(nameInput).toBeVisible();
-      await expect(priceInput).toBeVisible();
-      await expect(quantityInput).toBeVisible();
-
-      await expect(nameInput).toHaveAttribute("type", "text");
-      await expect(priceInput).toHaveAttribute("type", "number");
-      await expect(quantityInput).toHaveAttribute("type", "number");
-
-      await expect(nameInput).toHaveAttribute("placeholder", "Product Name");
-      await expect(priceInput).toHaveAttribute("placeholder", "Price (€)");
-      await expect(quantityInput).toHaveAttribute("placeholder", "Quantity");
+      await inventory.expectFormWithInputs();
     });
 
     await test.step("shows submit button", async () => {
-      const submitButton = page.getByTestId("inventory-submit-button");
-      await expect(submitButton).toBeVisible();
-      await expect(submitButton).toHaveText("Add Product");
+      await inventory.expectSubmitButton("Add Product");
     });
 
     await test.step("shows initial product list", async () => {
-      const list = page.getByTestId("inventory-product-list");
-      await expect(list).toBeVisible();
-
-      const products = list.locator('[data-testid^="inventory-product-"]');
-      const count = await products.count();
-      expect(count).toBeGreaterThan(0);
+      await inventory.expectInitialProductListNotEmpty();
     });
   });
 
   test("shows alert if form is submitted with empty inputs", async ({
     page,
   }) => {
-    // using the once is the only way I could make it work
-    // tried with:
-    //   const [dialog] = await Promise.all([
-    //     page.waitForEvent("dialog"),
-    //     page.getByTestId("inventory-submit-button").click(),
-    //   ]);
-    // and also just const dialog = await page.waitForEvent("dialog")
-    page.once("dialog", async (dialog) => {
-      // I notice this in the documentation about assertions
-      // "Use `expect.soft` for non-terminating failures."
-      // ref: https://playwright.dev/docs/test-assertions
-      expect.soft(dialog.message()).toBe("Please fill in all fields!");
-      await dialog.accept();
-    });
+    const inventory = new InventoryPage(page);
 
-    await page.getByTestId("inventory-submit-button").click();
+    await inventory.submitExpectAlert("Please fill in all fields!", {
+      soft: true,
+    });
   });
 
   test("shows alert if any required field is missing", async ({ page }) => {
-    await page.getByTestId("inventory-input-name").fill("Test Product");
-    await page.getByTestId("inventory-input-price").fill("10.5");
+    const inventory = new InventoryPage(page);
 
-    let dialogMessage: string | null = null;
-
-    page.once("dialog", async (dialog) => {
-      dialogMessage = dialog.message();
-      await dialog.accept();
+    await inventory.fillProductForm({
+      name: "Test Product",
+      price: "10.5",
+      // quantity intentionally missing
     });
 
-    await test.step("submits with one missing field", async () => {
-      await page.getByTestId("inventory-submit-button").click();
-    });
+    const dialogMessage = await inventory.submitAndCaptureAlertMessage();
 
     await test.step("verifies same alert is shown", async () => {
       expect.soft(dialogMessage).toBe("Please fill in all fields!");
@@ -101,146 +58,118 @@ test.describe("Store - Inventory", () => {
   });
 
   test("adds a new product in the list", async ({ page }) => {
-    const list = page.getByTestId("inventory-product-list");
-    const products = list.locator('li[data-testid^="inventory-product-"]');
-    const initialCount = await products.count();
+    const inventory = new InventoryPage(page);
+
+    const initialCount = await inventory.getProductCount();
 
     const newProductName = "Playwright Test Product";
     const priceInputValue = "23.23";
-    const quantityInputValue = "22.9"; // decimals should be accepted but stored as integer
+    const quantityInputValue = "22.9"; // decimals accepted but displayed as integer
 
     await test.step("fills all form fields", async () => {
-      await page.getByTestId("inventory-input-name").fill(newProductName);
-      await page.getByTestId("inventory-input-price").fill(priceInputValue);
-      await page
-        .getByTestId("inventory-input-quantity")
-        .fill(quantityInputValue);
+      await inventory.fillProductForm({
+        name: newProductName,
+        price: priceInputValue,
+        quantity: quantityInputValue,
+      });
     });
 
     await test.step("submits the form and appends product to the list", async () => {
-      await page.getByTestId("inventory-submit-button").click();
+      await inventory.submitButton.click();
 
-      // New product should appear at the end (index = initialCount)
-      const newProduct = page.getByTestId(`inventory-product-${initialCount}`);
+      const newProduct = inventory.productRow(initialCount);
       await expect(newProduct).toBeVisible();
     });
 
     await test.step("validates product name and price", async () => {
-      const nameLocator = page.getByTestId(
-        `inventory-product-name-${initialCount}`
-      );
-      await expect(nameLocator).toHaveText(newProductName);
-
-      const priceLabel = page.getByTestId(
-        `inventory-product-price-label-${initialCount}`
-      );
-      const priceValue = page.getByTestId(
-        `inventory-product-price-value-${initialCount}`
+      await expect(inventory.productName(initialCount)).toHaveText(
+        newProductName
       );
 
-      await expect(priceLabel).toHaveText("Price: €");
-      await expect(priceValue).toHaveText(priceInputValue); // decimals preserved for price
+      await expect(inventory.productPriceLabel(initialCount)).toHaveText(
+        "Price: €"
+      );
+      await expect(inventory.productPriceValue(initialCount)).toHaveText(
+        priceInputValue
+      ); // decimals preserved for price
     });
 
     await test.step("validates integer-only quantity display", async () => {
-      const qtyLocator = page.getByTestId(
-        `inventory-product-quantity-${initialCount}`
-      );
-      await expect(qtyLocator).toHaveText("22");
+      await expect(inventory.productQuantity(initialCount)).toHaveText("22");
     });
 
     await test.step("new product has working + and - buttons", async () => {
-      const qtyLocator = page.getByTestId(
-        `inventory-product-quantity-${initialCount}`
-      );
-      const increaseButton = page.getByTestId(
-        `inventory-product-increase-${initialCount}`
-      );
-      const decreaseButton = page.getByTestId(
-        `inventory-product-decrease-${initialCount}`
+      const originalQuantity = await inventory.getProductQuantityNumber(
+        initialCount
       );
 
-      await expect(increaseButton).toBeVisible();
-      await expect(decreaseButton).toBeVisible();
-
-      const originalQuantity = parseInt(
-        (await qtyLocator.textContent()) || "0",
-        10
+      await inventory.clickIncrease(initialCount);
+      await expect(inventory.productQuantity(initialCount)).toHaveText(
+        String(originalQuantity + 1)
       );
 
-      await increaseButton.click();
-      await expect(qtyLocator).toHaveText(String(originalQuantity + 1));
-
-      await decreaseButton.click();
-      await expect(qtyLocator).toHaveText(String(originalQuantity));
+      await inventory.clickDecrease(initialCount);
+      await expect(inventory.productQuantity(initialCount)).toHaveText(
+        String(originalQuantity)
+      );
     });
   });
 
   test("increments and decrements quantity for an existing product", async ({
     page,
   }) => {
-    const firstProductIndex = 0; // We will pick the first item
+    const inventory = new InventoryPage(page);
+    const firstProductIndex = 0;
 
-    const qtyLocator = page.getByTestId(
-      `inventory-product-quantity-${firstProductIndex}`
+    const initialQuantity = await inventory.getProductQuantityNumber(
+      firstProductIndex
     );
-    const increaseButton = page.getByTestId(
-      `inventory-product-increase-${firstProductIndex}`
-    );
-    const decreaseButton = page.getByTestId(
-      `inventory-product-decrease-${firstProductIndex}`
-    );
-
-    const initialQuantityText = await qtyLocator.textContent();
-    const initialQuantity = parseInt(initialQuantityText || "0", 10);
 
     await test.step("increments quantity by 1 when clicking +", async () => {
-      await increaseButton.click();
-      await expect(qtyLocator).toHaveText(String(initialQuantity + 1));
+      await inventory.clickIncrease(firstProductIndex);
+      await expect(inventory.productQuantity(firstProductIndex)).toHaveText(
+        String(initialQuantity + 1)
+      );
     });
 
     await test.step("decrements quantity by 1 when clicking -", async () => {
-      await decreaseButton.click();
-      await expect(qtyLocator).toHaveText(String(initialQuantity));
+      await inventory.clickDecrease(firstProductIndex);
+      await expect(inventory.productQuantity(firstProductIndex)).toHaveText(
+        String(initialQuantity)
+      );
     });
   });
 
   test("does not go below 0 when decreasing quantity (uses a product with 0 quantity)", async ({
     page,
   }) => {
+    const inventory = new InventoryPage(page);
+
     // product-6 starts at 0 so we use that
     const zeroQtyIndex = 6;
 
-    const qtyLocator = page.getByTestId(
-      `inventory-product-quantity-${zeroQtyIndex}`
-    );
-    const decreaseButton = page.getByTestId(
-      `inventory-product-decrease-${zeroQtyIndex}`
-    );
-
     await test.step("ensures starting quantity is 0", async () => {
-      await expect(qtyLocator).toHaveText("0");
+      await expect(inventory.productQuantity(zeroQtyIndex)).toHaveText("0");
     });
 
     await test.step("clicks - and keeps quantity at 0", async () => {
-      await decreaseButton.click();
-      await expect(qtyLocator).toHaveText("0");
+      await inventory.clickDecrease(zeroQtyIndex);
+      await expect(inventory.productQuantity(zeroQtyIndex)).toHaveText("0");
     });
   });
 
   test("price and quantity inputs accept decimal values", async ({ page }) => {
-    const priceInput = page.getByTestId("inventory-input-price");
-    const quantityInput = page.getByTestId("inventory-input-quantity");
+    const inventory = new InventoryPage(page);
 
     await test.step("fills decimal values in numeric inputs", async () => {
-      await priceInput.fill("12.34");
-      await quantityInput.fill("5.67");
+      await inventory.setPriceInput("12.34");
+      await inventory.setQuantityInput("5.67");
     });
 
     await test.step("checks that the raw input values include decimals", async () => {
-      await expect(priceInput).toHaveValue("12.34");
+      await inventory.expectPriceInputValue("12.34");
 
-      const quantityValue = await quantityInput.inputValue();
+      const quantityValue = await inventory.getQuantityInputRawValue();
       expect(quantityValue).toContain(".");
     });
   });
