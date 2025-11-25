@@ -193,4 +193,35 @@ test.describe("Store - Orders", () => {
       });
     }
   });
+
+  test("each order has a valid date line and known payment method", async ({
+    page,
+  }) => {
+    await createSingleOrderViaUi(page);
+
+    const ordersList = page.getByTestId("orders-list");
+    const orders = ordersList.locator('>li[data-testid^="order-"]');
+    const orderCount = await orders.count();
+
+    const allowedMethods = ["MBWay", "Klarna", "Multibanco", "PayPal", "Visa"];
+
+    for (let i = 0; i < orderCount; i++) {
+      await test.step(`checks date & payment method for order ${i}`, async () => {
+        const dateText =
+          (await page.getByTestId(`order-date-${i}`).textContent())?.trim() ??
+          "";
+        expect(dateText.startsWith("Date: ")).toBeTruthy();
+        expect(dateText.includes(",")).toBeTruthy(); // rough check "date, time"
+
+        const paymentText =
+          (
+            await page.getByTestId(`order-payment-${i}`).textContent()
+          )?.trim() ?? "";
+
+        expect(paymentText.startsWith("Payment Method: ")).toBeTruthy();
+        const method = paymentText.replace("Payment Method:", "").trim();
+        expect(allowedMethods).toContain(method);
+      });
+    }
+  });
 });
