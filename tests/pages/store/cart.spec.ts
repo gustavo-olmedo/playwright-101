@@ -1,153 +1,82 @@
 import { test, expect, Page } from "@playwright/test";
-
-async function openCartPage(page: Page, reload: boolean = true) {
-  if (reload) await page.goto("/store");
-  await page.getByTestId("store-tab-cart").click();
-  await expect(page.getByTestId("cart-page")).toBeVisible();
-}
-
-async function openCatalogPage(page: Page, reload: boolean = true) {
-  if (reload) await page.goto("/store");
-  await page.getByTestId("store-tab-catalog").click();
-  await expect(page.getByTestId("catalog-page")).toBeVisible();
-}
-
-async function openInventoryPage(page: Page) {
-  await page.goto("/store");
-  await page.getByTestId("store-tab-inventory").click();
-  await expect(page.getByTestId("inventory-page")).toBeVisible();
-}
-
-async function findCatalogItemIndexByName(page: Page, productName: string) {
-  const list = page.getByTestId("catalog-list");
-  const items = list.locator('li[data-testid^="catalog-item-"]');
-  const count = await items.count();
-
-  for (let i = 0; i < count; i++) {
-    const nameLocator = page.getByTestId(`catalog-item-name-${i}`);
-    const nameText = (await nameLocator.textContent())?.trim();
-    if (nameText === productName) {
-      return i;
-    }
-  }
-
-  return null;
-}
-
-async function findCartItemIndexByName(page: Page, productName: string) {
-  const list = page.getByTestId("cart-list");
-  const items = list.locator('[data-testid^="cart-item-"]');
-  const count = await items.count();
-
-  for (let i = 0; i < count; i++) {
-    const nameLocator = page.getByTestId(`cart-item-name-${i}`);
-    const nameText = (await nameLocator.textContent())?.trim();
-    if (nameText === productName) {
-      return i;
-    }
-  }
-
-  return null;
-}
+import { StoreApp } from "../../../pages/StoreApp";
+import { CartPage } from "../../../pages/CartPage";
 
 async function addToCartFromCatalog(
   page: Page,
   productName: string,
   times = 1
 ) {
-  await openCatalogPage(page, false);
+  const app = new StoreApp(page);
+  const catalog = await app.openCatalog();
 
-  const index = await findCatalogItemIndexByName(page, productName);
+  const index = await catalog.findItemIndexByName(productName);
   expect(index).not.toBeNull();
-
   const i = index as number;
-  const button = page.getByTestId(`catalog-item-add-button-${i}`);
 
+  const button = catalog.addToCartButton(i);
   for (let t = 0; t < times; t++) {
     await expect(button).toBeEnabled();
-    await button.click();
+    await catalog.clickAddToCart(i);
   }
 }
 
 test.describe("Store - Cart", () => {
   test.beforeEach(async ({ page }) => {
-    await openCartPage(page);
+    const app = new StoreApp(page);
+    await app.goto();
+    await app.openCart();
   });
 
   test("cart shows empty message when there are no items", async ({ page }) => {
-    await openCartPage(page);
+    const cart = new CartPage(page);
 
-    await expect(page.getByTestId("cart-title")).toHaveText("Your Cart");
-    await expect(page.getByTestId("cart-empty-message")).toBeVisible();
-    await expect(page.getByTestId("cart-empty-message")).toHaveText(
-      "Your cart is empty."
-    );
-
-    // No cart list / summary should exist
-    const list = page.locator('[data-testid="cart-list"]');
-    await expect(list).toHaveCount(0);
-    const summary = page.locator('[data-testid="cart-summary"]');
-    await expect(summary).toHaveCount(0);
+    await cart.expectEmpty("Your cart is empty.");
   });
 
   test("cart shows items and summary after adding from catalog", async ({
     page,
   }) => {
+    const app = new StoreApp(page);
+
     await test.step("add one product from catalog", async () => {
       await addToCartFromCatalog(page, "Giant Rubber Duck", 1);
     });
 
     await test.step("open cart page", async () => {
-      await openCartPage(page, false);
+      await app.openCart();
     });
+
+    const cart = new CartPage(page);
 
     await test.step("empty message is not shown", async () => {
-      const emptyMessage = page.locator('[data-testid="cart-empty-message"]');
-      await expect(emptyMessage).toHaveCount(0);
+      await cart.expectNotEmpty();
     });
 
-    await test.step("cart list and summary are visible", async () => {
-      const list = page.getByTestId("cart-list");
-      await expect(list).toBeVisible();
-
-      const items = list.locator('[data-testid^="cart-item-"]');
-      const count = await items.count();
+    await test.step("cart list has at least one item", async () => {
+      const count = await cart.getItemCount();
       expect(count).toBeGreaterThan(0);
-
-      const summary = page.getByTestId("cart-summary");
-      await expect(summary).toBeVisible();
-      await expect(page.getByTestId("cart-total-label")).toHaveText("Total: €");
-      await expect(page.getByTestId("cart-total-value")).toBeVisible();
     });
   });
 
   test("each cart item total equals quantity × price", async ({ page }) => {
+    const app = new StoreApp(page);
+
     await test.step("create a cart with two items from catalog", async () => {
       await addToCartFromCatalog(page, "Giant Rubber Duck", 1);
       await addToCartFromCatalog(page, "Bacon-Scented Candle", 1);
     });
 
-    await openCartPage(page, false);
+    await app.openCart();
+    const cart = new CartPage(page);
 
-    const list = page.getByTestId("cart-list");
-    const items = list.locator('li[data-testid^="cart-item-"]');
-    const count = await items.count();
+    const count = await cart.getItemCount();
 
     for (let i = 0; i < count; i++) {
       await test.step(`validates row total for cart item ${i}`, async () => {
-        const quantityText = await page
-          .getByTestId(`cart-item-quantity-${i}`)
-          .textContent();
-        const priceText = await page
-          .getByTestId(`cart-item-price-value-${i}`)
-          .textContent();
-        const rowTotalText = await page
-          .getByTestId(`cart-item-total-value-${i}`)
-          .textContent();
-
-        const quantity = parseFloat((quantityText || "0").trim());
-        const price = parseFloat((priceText || "0").trim());
-        const rowTotal = parseFloat((rowTotalText || "0").trim());
+        const quantity = await cart.getItemQuantityNumber(i);
+        const price = await cart.getItemPriceNumber(i);
+        const rowTotal = await cart.getItemRowTotalNumber(i);
 
         const expectedRowTotal = parseFloat((quantity * price).toFixed(2));
         expect(rowTotal).toBe(expectedRowTotal);
@@ -156,31 +85,25 @@ test.describe("Store - Cart", () => {
   });
 
   test("cart total equals sum of row totals", async ({ page }) => {
+    const app = new StoreApp(page);
+
     await test.step("create a cart with two items from catalog", async () => {
       await addToCartFromCatalog(page, "Giant Rubber Duck", 1);
       await addToCartFromCatalog(page, "Bacon-Scented Candle", 1);
     });
 
-    await openCartPage(page, false);
+    await app.openCart();
+    const cart = new CartPage(page);
 
-    const list = page.getByTestId("cart-list");
-    const items = list.locator('li[data-testid^="cart-item-"]');
-    const count = await items.count();
-
+    const count = await cart.getItemCount();
     let sum = 0;
 
     for (let i = 0; i < count; i++) {
-      const rowTotalText = await page
-        .getByTestId(`cart-item-total-value-${i}`)
-        .textContent();
-      const rowTotal = parseFloat((rowTotalText || "0").trim());
+      const rowTotal = await cart.getItemRowTotalNumber(i);
       sum += rowTotal;
     }
 
-    const cartTotalText = await page
-      .getByTestId("cart-total-value")
-      .textContent();
-    const cartTotal = parseFloat((cartTotalText || "0").trim());
+    const cartTotal = await cart.getCartTotalNumber();
     const expectedSum = parseFloat(sum.toFixed(2));
 
     expect(cartTotal).toBe(expectedSum);
@@ -189,7 +112,9 @@ test.describe("Store - Cart", () => {
   test("adding from catalog increases quantity and row total in cart", async ({
     page,
   }) => {
+    const app = new StoreApp(page);
     const productName = "Giant Rubber Duck";
+
     let baseline: {
       index: number;
       quantity: number;
@@ -199,27 +124,18 @@ test.describe("Store - Cart", () => {
 
     await test.step("start with a single unit of the product in cart", async () => {
       await addToCartFromCatalog(page, productName, 1);
-      await openCartPage(page, false);
+      await app.openCart();
 
-      const index = await findCartItemIndexByName(page, productName);
+      const cart = new CartPage(page);
+      const index = await cart.findItemIndexByName(productName);
       expect(index).not.toBeNull();
       const i = index as number;
 
-      const quantityText = await page
-        .getByTestId(`cart-item-quantity-${i}`)
-        .textContent();
-      const priceText = await page
-        .getByTestId(`cart-item-price-value-${i}`)
-        .textContent();
-      const rowTotalText = await page
-        .getByTestId(`cart-item-total-value-${i}`)
-        .textContent();
-
       baseline = {
         index: i,
-        quantity: parseFloat((quantityText || "0").trim()),
-        price: parseFloat((priceText || "0").trim()),
-        rowTotal: parseFloat((rowTotalText || "0").trim()),
+        quantity: await cart.getItemQuantityNumber(i),
+        price: await cart.getItemPriceNumber(i),
+        rowTotal: await cart.getItemRowTotalNumber(i),
       };
 
       expect(baseline.quantity).toBeGreaterThan(0);
@@ -230,18 +146,12 @@ test.describe("Store - Cart", () => {
     });
 
     await test.step("cart quantity and row total are updated", async () => {
-      await openCartPage(page, false);
+      await app.openCart();
+      const cart = new CartPage(page);
 
       const i = baseline.index;
-      const quantityText = await page
-        .getByTestId(`cart-item-quantity-${i}`)
-        .textContent();
-      const rowTotalText = await page
-        .getByTestId(`cart-item-total-value-${i}`)
-        .textContent();
-
-      const quantityNow = parseFloat((quantityText || "0").trim());
-      const rowTotalNow = parseFloat((rowTotalText || "0").trim());
+      const quantityNow = await cart.getItemQuantityNumber(i);
+      const rowTotalNow = await cart.getItemRowTotalNumber(i);
 
       expect(quantityNow).toBe(baseline.quantity + 1);
 
@@ -255,17 +165,14 @@ test.describe("Store - Cart", () => {
   test("new product created in inventory can be added via catalog and appears in cart", async ({
     page,
   }) => {
+    const app = new StoreApp(page);
     const productName = "Cart New Product";
     const priceValue = "7.77";
     const quantityValue = "4.2"; // inventory stores 4 units
 
     await test.step("create product in Inventory", async () => {
-      await openInventoryPage(page);
-
-      await page.getByTestId("inventory-input-name").fill(productName);
-      await page.getByTestId("inventory-input-price").fill(priceValue);
-      await page.getByTestId("inventory-input-quantity").fill(quantityValue);
-      await page.getByTestId("inventory-submit-button").click();
+      const inventory = await app.openInventory();
+      await inventory.addProduct(productName, priceValue, quantityValue);
     });
 
     await test.step("add product once from Catalog", async () => {
@@ -273,48 +180,38 @@ test.describe("Store - Cart", () => {
     });
 
     await test.step("cart contains new product with correct quantity, price, and row total", async () => {
-      await openCartPage(page, false);
+      await app.openCart();
+      const cart = new CartPage(page);
 
-      const index = await findCartItemIndexByName(page, productName);
+      const index = await cart.findItemIndexByName(productName);
       expect(index).not.toBeNull();
-
       const i = index as number;
 
-      await expect(page.getByTestId(`cart-item-name-${i}`)).toHaveText(
-        productName
-      );
-      await expect(page.getByTestId(`cart-item-price-value-${i}`)).toHaveText(
-        priceValue
-      );
-      await expect(page.getByTestId(`cart-item-quantity-${i}`)).toHaveText("1");
+      await expect(cart.itemName(i)).toHaveText(productName);
+      await expect(cart.itemPriceValue(i)).toHaveText(priceValue);
+      await expect(cart.itemQuantity(i)).toHaveText("1");
 
-      const rowTotalText = await page
-        .getByTestId(`cart-item-total-value-${i}`)
-        .textContent();
-      const rowTotal = parseFloat((rowTotalText || "0").trim());
+      const rowTotal = await cart.getItemRowTotalNumber(i);
       const expected = parseFloat(priceValue);
 
       expect(rowTotal).toBe(expected);
     });
   });
 
-  test("Go to Payments button navigates to Payments section when cart has items", async ({
+  test("go to Payments button navigates to Payments section when cart has items", async ({
     page,
   }) => {
+    const app = new StoreApp(page);
+
     await test.step("add item to cart so summary and button exist", async () => {
       await addToCartFromCatalog(page, "Giant Rubber Duck", 1);
     });
 
-    await openCartPage(page, false);
+    await app.openCart();
+    const cart = new CartPage(page);
 
-    await test.step("click Go to Payments", async () => {
-      const button = page.getByTestId("cart-go-to-payment");
-      await expect(button).toBeVisible();
-      await button.click();
-    });
-
-    await test.step("shows Payments page/section", async () => {
-      await expect(page.getByTestId("payment-page")).toBeVisible();
+    await test.step("click Go to Payments and land on Payments page", async () => {
+      await cart.goToPaymentsAndWait();
     });
   });
 });
