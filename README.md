@@ -4,6 +4,7 @@ This project contains automated tests using Playwright, structured around:
 
 - Page Object Model (POM) classes
 - Page-level tests (per section: Home, Inventory, Catalog, Cart, Payment, Orders)
+- Behavioural / end-to-end flows that connect multiple pages
 
 The goal is to learn about the framework.
 
@@ -27,20 +28,27 @@ The goal is to learn about the framework.
 │  └─ orders.helper.ts
 │
 ├─ tests/
-│  └─ pages/
+│  ├─ pages/
+│  │  └─ store/
+│  │     ├─ home.spec.ts
+│  │     ├─ inventory.spec.ts
+│  │     ├─ catalog.spec.ts
+│  │     ├─ cart.spec.ts
+│  │     ├─ payment.spec.ts
+│  │     └─ orders.spec.ts
+│  │
+│  └─ flows/
 │     └─ store/
-│        ├─ home.spec.ts
-│        ├─ inventory.spec.ts
-│        ├─ catalog.spec.ts
-│        ├─ cart.spec.ts
-│        ├─ payment.spec.ts
-│        └─ orders.spec.ts
+│        ├─ basic-single-product-purchase.spec.ts
+│        ├─ multi-product-purchase-with-totals.spec.ts
+│        └─ inventory-catalog-out-of-stock.spec.ts
 │
 ├─ playwright.config.ts
 └─ package.json
 ```
 
 - `tests/pages/store` → page-focused tests
+- `tests/flows/store` → behavioural / cross-page flows
 
 ---
 
@@ -71,6 +79,21 @@ These focus on one page at a time and use the POM for that page:
 - `orders.spec.ts`
   - Empty state, orders list, order total vs item totals, date/payment format, creating an order from Payment and verifying it in history
 
+### 2) Flow / E2E tests (`tests/flows/store/*.spec.ts`)
+
+These tests simulate real user journeys across multiple pages:
+
+- `basic-single-product-purchase.spec.ts`  
+  Single product purchase end-to-end: Catalog → Cart → Payment → Orders.
+
+- `multi-product-purchase-with-totals.spec.ts`  
+  Multi-product, multi-quantity purchase and total verification across Cart & Payment.
+
+- `inventory-catalog-out-of-stock.spec.ts`  
+  Adjust inventory, verify Catalog stock, and drive an item to “Out of Stock”.
+
+---
+
 ## NPM Scripts
 
 In `package.json` you can define the following scripts:
@@ -81,6 +104,7 @@ In `package.json` you can define the following scripts:
   "test:ui": "npx playwright test --ui",
   "test:headed": "npx playwright test --headed",
   "test:store:pages": "npx playwright test tests/pages/store",
+  "test:store:flows": "npx playwright test tests/flows/store",
   "test:debug": "PWDEBUG=1 npx playwright test"
 }
 ```
@@ -91,6 +115,7 @@ Notes:
 - `test:ui` – opens the Playwright Test Runner UI.
 - `test:headed` – runs tests with a visible browser (useful while iterating).
 - `test:store:pages` – only Store page-level specs.
+- `test:store:flows` – only Store flow / E2E specs.
 - `test:debug` – runs tests with `PWDEBUG=1` enabled (Playwright inspector).
 
 ---
@@ -120,6 +145,12 @@ Run only Store page tests:
 
 ```bash
 npm run test:store:pages
+```
+
+Run only Store flow / E2E tests:
+
+```bash
+npm run test:store:flows
 ```
 
 Run tests headed:
