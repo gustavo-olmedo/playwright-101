@@ -1,4 +1,4 @@
-# Playwright 101
+# Playwright tests
 
 This project contains automated tests using Playwright, structured around:
 
