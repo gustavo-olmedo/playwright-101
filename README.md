@@ -28,7 +28,7 @@ The idea is to have a single repository where the **application under test** and
 │  └─ README.md
 │
 ├─ .gitignore
-└─ README.md             # This file
+└─ README.md
 ```
 
 For more details about the test project itself, see:
