@@ -1,134 +1,137 @@
 # Automation Test Playground
 
-Este projeto tem o objetivo de criar uma série de objetivos web para que possa ser feita automação de testes.
+This project aims to provide a set of web pages so that test automation can be practiced.  
+In this monorepository, it is also used as the sample application under test for my Playwright end-to-end tests.
 
-<img src="https://res.cloudinary.com/dtglidvcw/image/upload/v1722117148/BUGBUSTER/oxppkv2auqy48lj5vbjn.png" alt="Preview do Site" width="600" />
+<img src="https://res.cloudinary.com/dtglidvcw/image/upload/v1722117148/BUGBUSTER/oxppkv2auqy48lj5vbjn.png" alt="Site Preview" width="600" />
 
-## Desenvolvedores
+## Developers
 
-Foi desenvolvido pelo Bruno Machado da página Bug Busters Mentoria.
+This project was originally developed by **Bruno Machado** from the **Bug Busters Mentoria** page.
 
-## Tecnologias Utilizadas
+## Technologies Used
 
-Este projeto foi construído utilizando as seguintes tecnologias:
+This project was built using the following technologies:
 
-- [Next.js](https://nextjs.org/) - Um framework React para desenvolvimento de aplicações web.
-- [React](https://reactjs.org/) - Uma biblioteca JavaScript para construir interfaces de usuário.
-- [TypeScript](https://www.typescriptlang.org/) - Um superset de JavaScript que adiciona tipagem estática ao idioma.
-- [Tailwind CSS](https://tailwindcss.com/) - Um framework CSS para estilização rápida e eficiente.
-- [ESLint](https://eslint.org/) - Uma ferramenta para identificar e corrigir problemas em código JavaScript.
-- [Prettier](https://prettier.io/) - Um formatador de código opinativo.
-- [Jest](https://jestjs.io/) - Um framework de teste em JavaScript.
-- [Testing Library](https://testing-library.com/) - Um conjunto de utilitários para testar componentes React.
-- [Vercel](https://vercel.com/) - Uma plataforma de deploy para aplicações frontend.
-- [Harry Potter API](https://hp-api.onrender.com/) - Uma API para obter informações sobre personagens, feitiços e casas do universo de Harry Potter.
-- [Cloudinary](https://cloudinary.com/) - Um serviço de gerenciamento e hospedagem de imagens utilizado para armazenar e servir as imagens do site.
+- [Next.js](https://nextjs.org/) – A React framework for building web applications.
+- [React](https://reactjs.org/) – A JavaScript library for building user interfaces.
+- [TypeScript](https://www.typescriptlang.org/) – A superset of JavaScript that adds static typing to the language.
+- [Tailwind CSS](https://tailwindcss.com/) – A utility-first CSS framework for fast and efficient styling.
+- [ESLint](https://eslint.org/) – A tool for identifying and fixing problems in JavaScript/TypeScript code.
+- [Prettier](https://prettier.io/) – An opinionated code formatter.
+- [Jest](https://jestjs.io/) – A JavaScript testing framework.
+- [Testing Library](https://testing-library.com/) – A set of utilities for testing React components.
+- [Vercel](https://vercel.com/) – A deployment platform for frontend applications.
+- [Harry Potter API](https://hp-api.onrender.com/) – An API for retrieving information about characters, spells, and houses from the Harry Potter universe.
+- [Cloudinary](https://cloudinary.com/) – An image management and hosting service used to store and serve the site images.
 
-## Como Executar o Projeto
+## How to Run the Project
 
-### Pré-requisitos
+### Prerequisites
 
-- [Node.js](https://nodejs.org/) (versão 14 ou superior)
-- [npm](https://www.npmjs.com/) ou [yarn](https://yarnpkg.com/) ou [pnpm](https://pnpm.io/) ou [bun](https://bun.sh/)
+- [Node.js](https://nodejs.org/) (version 14 or higher)
+- [npm](https://www.npmjs.com/), [yarn](https://yarnpkg.com/), [pnpm](https://pnpm.io/), or [bun](https://bun.sh/)
 
-### Passos para Executar
+### Steps to Run
 
-1. **Clone o repositório:**
+1. **Clone the repository:**
 
 ```bash
 git clone https://github.com/brunomachadors/playground.git
 cd playground
 ```
 
-2. **Instale as dependências:**
+2. **Install the dependencies:**
 
 ```bash
 npm install
-# ou
+# or
 yarn install
-# ou
+# or
 pnpm install
-# ou
+# or
 bun install
 ```
 
-3. **Execute o servidor de desenvolvimento:**
+3. **Start the development server:**
 
 ```bash
 npm run dev
-# ou
+# or
 yarn dev
-# ou
+# or
 pnpm dev
-# ou
+# or
 bun dev
 ```
 
-4. **Abra [http://localhost:3000](http://localhost:3000) no seu navegador para ver o resultado.**
+4. **Open [http://localhost:3000](http://localhost:3000) in your browser to see the result.**
 
-Você pode começar a editar a página modificando `app/page.tsx`. A página será automaticamente atualizada conforme você edita o arquivo.
+You can start editing the page by modifying `app/page.tsx`. The page will automatically update as you edit the file.
 
-### Comandos Adicionais
+### Additional Commands
 
-- **Executar ESLint:**
+- **Run ESLint:**
 
 ```bash
 npm run lint
 ```
 
-- **Executar Prettier:**
+- **Run Prettier:**
 
 ```bash
 npm run format
 ```
 
-- **Executar testes:**
+- **Run tests:**
 
 ```bash
 npm run test
 ```
 
-## Contas de Teste
+## Test Accounts
 
-Para facilitar a automação dos testes, você pode usar as seguintes contas de teste:
+To make test automation easier, you can use the following test accounts:
 
-### Conta Regular
+### Regular Account
 
 - **Login:** teste
-- **Senha:** password123
+- **Password:** password123
 
-### Conta Bloqueada
+### Blocked Account
 
 - **Login:** testeblock
-- **Senha:** password123
+- **Password:** password123
 
-## API de Harry Potter
+## Harry Potter API
 
-Este projeto utiliza a [Harry Potter API](https://hp-api.onrender.com/) para obter dados sobre personagens, feitiços e casas do universo de Harry Potter. Para mais informações sobre como utilizar esta API, consulte a [documentação oficial da API](https://hp-api.onrender.com/).
+This project uses the [Harry Potter API](https://hp-api.onrender.com/) to retrieve data about characters, spells, and houses from the Harry Potter universe. For more information on how to use this API, check the [official API documentation](https://hp-api.onrender.com/).
 
-## Hospedagem de Imagens
+## Image Hosting
 
-As imagens utilizadas neste projeto estão hospedadas no [Cloudinary](https://cloudinary.com/). Para saber mais sobre como utilizar o Cloudinary para gerenciamento e hospedagem de imagens, consulte a [documentação oficial do Cloudinary](https://cloudinary.com/documentation).
+The images used in this project are hosted on [Cloudinary](https://cloudinary.com/). To learn more about using Cloudinary for image management and hosting, see the [official Cloudinary documentation](https://cloudinary.com/documentation).
 
-## Saiba Mais
+## Learn More
 
-Para aprender mais sobre as tecnologias utilizadas neste projeto, consulte os seguintes recursos:
+To learn more about the technologies used in this project, see the following resources:
 
-- [Documentação do Next.js](https://nextjs.org/docs)
-- [Documentação do React](https://reactjs.org/docs/getting-started.html)
-- [Documentação do TypeScript](https://www.typescriptlang.org/docs/)
-- [Documentação do Tailwind CSS](https://tailwindcss.com/docs)
-- [Documentação do ESLint](https://eslint.org/docs/user-guide/getting-started)
-- [Documentação do Prettier](https://prettier.io/docs/en/index.html)
-- [Documentação do Jest](https://jestjs.io/docs/getting-started)
-- [Documentação do Testing Library](https://testing-library.com/docs/)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [React Documentation](https://reactjs.org/docs/getting-started.html)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [ESLint Documentation](https://eslint.org/docs/user-guide/getting-started)
+- [Prettier Documentation](https://prettier.io/docs/en/index.html)
+- [Jest Documentation](https://jestjs.io/docs/getting-started)
+- [Testing Library Documentation](https://testing-library.com/docs/)
 
-## Deploy na Vercel
+## Deploy on Vercel
 
-A maneira mais fácil de fazer o deploy da sua aplicação Next.js é utilizando a [Plataforma Vercel](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) criada pelos desenvolvedores do Next.js.
+The easiest way to deploy your Next.js application is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme), created by the developers of Next.js.
 
-Consulte nossa [documentação de deployment do Next.js](https://nextjs.org/docs/deployment) para mais detalhes.
+Check the [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
 
-### Considerações finais
+### Final Considerations
 
-Este projeto eu desenvolvi com o objetivo de ajudar pessoas que estão começando na área de testes, caso tenha alguma sugestão fique livre pra entrar em contato comigo.
+This project was originally developed with the goal of helping people who are starting in the testing field.  
+In my setup, I am also using it as a practice application to run and experiment with **Playwright** automated tests.  
+If you have any suggestions, feel free to get in touch with the original author or contribute via pull requests.
