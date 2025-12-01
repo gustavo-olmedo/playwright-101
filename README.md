@@ -28,7 +28,7 @@ The idea is to have a single repository where the **application under test** and
 │  └─ README.md
 │
 ├─ .gitignore
-└─ README.md
+└─ README.md             # This file
 ```
 
 For more details about the test project itself, see:
@@ -65,11 +65,51 @@ The goal is to learn and practice Playwright using the `playground-project` app.
 
 ---
 
-## Getting Started
+## Using the Makefile (One-Command Flow)
+
+The repository includes a `Makefile` at the root that orchestrates everything.
+
+From the repo root, you can simply run:
+
+```bash
+make
+```
+
+This will:
+
+1. Install dependencies in **`playground-project`** and **`playwright-tests`**.
+2. Build and start the **Next.js** app (`playground-project`) on `http://localhost:3000`.
+3. Wait until the app is reachable.
+4. Run the **Playwright tests** from `playwright-tests` against the running app.
+5. Stop the Next.js dev server once tests finish.
+
+So for the most common case (setup + run app + run tests), **`make` is all you need**.
+
+### Other Makefile targets
+
+If you want more control, you can also use the individual targets:
+
+```bash
+# Install dependencies in both projects
+make setup
+
+# Run only the Next.js app (dev server)
+make dev-playground
+
+# Run only the Playwright tests
+make test-playwright
+
+# Run Playwright tests in UI mode
+make test-playwright-ui
+```
+
+---
+
+## Getting Started (Manual Alternative)
+
+If you prefer not to use `make`, you can run everything manually.
 
 ### 1. Install Dependencies
-
-#### Option A – Manual (no extra tools)
 
 From the repo root:
 
@@ -84,18 +124,7 @@ npm install
 npx playwright install
 ```
 
-#### Option B – Using a Makefile
-
-From the repo root:
-
-```bash
-make setup
-```
-
-This will:
-
-- Run `npm install` in `playground-project`
-- Run `npm install` in `playwright-tests`
+---
 
 ## Running the Next.js App (`playground-project`)
 
@@ -112,7 +141,7 @@ Then open:
 
 The app will auto-reload as you change the source files (e.g. `app/page.tsx`).
 
-If you are using a `Makefile` with the `dev-playground` target, you can also run:
+If you are using the Makefile, you can instead run:
 
 ```bash
 make dev-playground
@@ -151,30 +180,8 @@ npm run test:store:flows
 npm run test:debug
 ```
 
-You can also run from the root:
+You can also run from the root via the Makefile:
 
 ```bash
 make test-playwright
 ```
-
----
-
-## Typical Workflow
-
-1. **Start the app**
-
-   ```bash
-   cd playground-project
-   npm run dev
-   ```
-
-2. **In another terminal, run tests**
-
-   ```bash
-   cd playwright-tests
-   npm test
-   ```
-
-3. Iterate on:
-   - UI and behaviour in `playground-project`
-   - Page objects, helpers, and tests in `playwright-tests`
