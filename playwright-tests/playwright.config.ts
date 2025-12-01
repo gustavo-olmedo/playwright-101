@@ -25,7 +25,7 @@ export default defineConfig({
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    baseURL: "https://playground-drab-six.vercel.app",
+    baseURL: "http://localhost:3000",
     trace: "on-first-retry",
   },
 
