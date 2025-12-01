@@ -16,11 +16,11 @@ public/static
 .env.production.local
 
 # Playwright
-test-results/
-playwright-report/
-blob-report/
-playwright/.cache/
-playwright/.auth/
+playwright-tests/test-results/
+playwright-tests/playwright-report/
+playwright-tests/blob-report/
+playwright-tests/playwright/.cache/
+playwright-tests/playwright/.auth/
 
 # Log files
 npm-debug.log*
